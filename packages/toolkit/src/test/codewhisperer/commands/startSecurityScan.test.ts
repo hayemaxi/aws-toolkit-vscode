@@ -27,7 +27,7 @@ import {
 } from '../../../codewhisperer/models/constants'
 import * as model from '../../../codewhisperer/models/model'
 import { CodewhispererSecurityScan } from '../../../shared/telemetry/telemetry.gen'
-import { getFetchStubWithResponse } from '../../common/request.test'
+import { getFetchStubWithResponse } from 'aws-common-vscode/test/common/request.test'
 
 const mockCreateCodeScanResponse = {
     $response: {

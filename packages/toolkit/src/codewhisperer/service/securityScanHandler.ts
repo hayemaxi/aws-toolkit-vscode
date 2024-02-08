@@ -17,7 +17,7 @@ import { pageableToCollection } from '../../shared/utilities/collectionUtils'
 import { ArtifactMap, CreateUploadUrlRequest, CreateUploadUrlResponse } from '../client/codewhispereruserclient'
 import { Truncation } from '../util/dependencyGraph/dependencyGraph'
 import { TelemetryHelper } from '../util/telemetryHelper'
-import request from '../../common/request'
+import { request } from 'aws-common-vscode'
 
 export async function listScanResults(
     client: DefaultCodeWhispererClient,

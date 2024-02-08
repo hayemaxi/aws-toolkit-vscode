@@ -5,7 +5,7 @@
 
 import crossFetch from 'cross-fetch'
 
-const request = {
+export const request = {
     /**
      * Make a fetch request.
      *
@@ -26,7 +26,6 @@ const request = {
         return new FetchRequest(url, { ...params, method }, wrappedFetch)
     },
 }
-export default request
 
 type RequestMethod = 'GET' | 'POST' | 'PUT'
 /** All possible params of a fetch request (eg: headers) */

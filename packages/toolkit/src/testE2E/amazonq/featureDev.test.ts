@@ -11,7 +11,7 @@ import { FeatureDevClient } from '../../amazonqFeatureDev/client/featureDev'
 import { verifyTextOrder } from './framework/text'
 import { examples } from '../../amazonqFeatureDev/userFacingText'
 import * as authUtil from '../../codewhisperer/util/authUtil'
-import request from '../../common/request'
+import { request } from 'aws-common-vscode'
 
 describe('Amazon Q Feature Dev', function () {
     let framework: qTestingFramework

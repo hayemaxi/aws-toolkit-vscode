@@ -15,7 +15,7 @@ import { FeatureDevClient } from '../../../amazonqFeatureDev/client/featureDev'
 import { PrepareRepoFailedError } from '../../../amazonqFeatureDev/errors'
 import { TelemetryHelper } from '../../../amazonqFeatureDev/util/telemetryHelper'
 import { assertTelemetry } from '../../testUtil'
-import { getFetchStubWithResponse } from '../../common/request.test'
+import { getFetchStubWithResponse } from 'aws-common-vscode/test/common/request.test'
 
 const mockSessionStateAction = (msg?: string): SessionStateAction => {
     return {

@@ -6,8 +6,8 @@
 import { SinonStub, stub } from 'sinon'
 import assert from 'assert'
 import crossFetch from 'cross-fetch'
-import request, { RequestCancelledError, RequestError } from '../../common/request'
-import globals from '../../shared/extensionGlobals'
+import { request, RequestCancelledError, RequestError } from 'aws-common-vscode'
+import globals from '../../../toolkit/src/shared/extensionGlobals'
 
 // Returns a stubbed fetch for other tests.
 export function getFetchStubWithResponse(response: Partial<Response>) {

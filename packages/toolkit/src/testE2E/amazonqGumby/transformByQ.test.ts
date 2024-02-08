@@ -5,7 +5,7 @@
 
 import assert from 'assert'
 import { getSha256, uploadArtifactToS3, zipCode } from '../../codewhisperer/service/transformByQHandler'
-import request from '../../common/request'
+import { request } from 'aws-common-vscode'
 import * as CodeWhispererConstants from '../../codewhisperer/models/constants'
 import * as codeWhisperer from '../../codewhisperer/client/codewhisperer'
 import * as os from 'os'
