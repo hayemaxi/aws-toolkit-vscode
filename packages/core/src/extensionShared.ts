@@ -17,7 +17,7 @@ import { Commands } from './shared/vscode/commands2'
 import { documentationUrl, endpointsFileUrl, githubCreateIssueUrl, githubUrl } from './shared/constants'
 import { getIdeProperties, aboutToolkit, isCloud9 } from './shared/extensionUtilities'
 import { telemetry } from './shared/telemetry/telemetry'
-import { openUrl } from './shared/utilities/vsCodeUtils'
+import { isExtensionActive, openUrl } from './shared/utilities/vsCodeUtils'
 import { activate as activateCodeWhisperer, shutdown as codewhispererShutdown } from './codewhisperer/activation'
 import { activateViewsShared } from './awsexplorer/activationShared'
 
@@ -41,7 +41,7 @@ import { showMessageWithUrl } from './shared/utilities/messages'
 import { Logging } from './shared/logger/commands'
 import { registerWebviewErrorHandler } from './webviews/server'
 import { showQuickStartWebview } from './shared/extensionStartup'
-import { ExtContext } from './shared/extensions'
+import { ExtContext, VSCODE_EXTENSION_ID } from './shared/extensions'
 import { getSamCliContext } from './shared/sam/cli/samCliContext'
 import { UriHandler } from './shared/vscode/uriHandler'
 import { disableAwsSdkWarning } from './shared/awsClientBuilder'
@@ -138,7 +138,11 @@ export async function activateShared(context: vscode.ExtensionContext): Promise<
 
     await activateViewsShared(extContext.extensionContext)
 
-    await activateCodeWhisperer(extContext)
+    // TODO: Remove check. To avoid conflicts during testing, do not enable CW
+    // if the standalone extension is running.
+    if (!isExtensionActive(VSCODE_EXTENSION_ID.amazonq)) {
+        await activateCodeWhisperer(extContext)
+    }
 
     return extContext
 }

@@ -54,6 +54,8 @@ import { initializeNetworkAgent } from './codewhisperer/client/agent'
 import { Timeout } from './shared/utilities/timeoutUtils'
 import { submitFeedback } from './feedback/vue/submitFeedback'
 import { activateShared, deactivateShared } from './extensionShared'
+import { VSCODE_EXTENSION_ID } from './shared/extensions'
+import { isExtensionActive } from './shared/utilities/vsCodeUtils'
 
 let localize: nls.LocalizeFunc
 
@@ -155,7 +157,9 @@ export async function activate(context: vscode.ExtensionContext) {
         await activateSchemas(extContext)
 
         if (!isCloud9()) {
-            if (!isSageMaker()) {
+            // TODO: Remove check. To avoid conflicts during testing, do not enable CW/Q
+            // if the standalone extension is running.
+            if (!isSageMaker() && !isExtensionActive(VSCODE_EXTENSION_ID.amazonq)) {
                 await activateCWChat(extContext.extensionContext)
                 await activateQGumby(extContext)
             }
