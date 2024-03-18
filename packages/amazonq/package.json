@@ -248,17 +248,6 @@
                     "when": "false"
                 }
             ],
-            "aws-explorer": [
-                {
-                    "id": "aws.amazonq",
-                    "name": "%AWS.amazonq.title%",
-                    "when": "!isCloud9 && !aws.isSageMaker"
-                },
-                {
-                    "id": "aws.codewhisperer",
-                    "name": "%AWS.codewhisperer.explorerTitle%"
-                }
-            ],
             "aws-codewhisperer-reference-log": [
                 {
                     "type": "webview",
