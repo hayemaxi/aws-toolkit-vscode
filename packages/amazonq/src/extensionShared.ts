@@ -18,7 +18,7 @@ import {
     globals,
     RegionProvider,
 } from 'aws-core-vscode/shared'
-import { Auth, initializeAuth } from 'aws-core-vscode/auth'
+import { initializeAuth } from 'aws-core-vscode/auth'
 import { makeEndpointsProvider } from 'aws-core-vscode'
 import { activate as activateCWChat } from 'aws-core-vscode/amazonq'
 import { activate as activateQGumby } from 'aws-core-vscode/amazonqGumby'
@@ -68,10 +68,6 @@ export async function activateShared(context: vscode.ExtensionContext) {
     if (isExtensionActive(VSCODE_EXTENSION_ID.awstoolkit)) {
         void vscode.commands.executeCommand('aws.amazonq.refresh')
     }
-
-    // only display the login screen if there is no connections at all
-    // if there are connections, use can re-auth from status bar or q chat.
-    await vscode.commands.executeCommand('setContext', 'aws.amazonq.hasConnections', Auth.instance.hasConnections)
 
     // reload webviews
     await vscode.commands.executeCommand('workbench.action.webview.reloadWebviewAction')
