@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 import * as vscode from 'vscode'
-import { SsoConnection } from '../../../../auth/connection'
+import { SsoConnection, scopesCodeWhispererChat } from '../../../../auth/connection'
 import { AuthUtil, amazonQScopes } from '../../../../codewhisperer/util/authUtil'
 import { AuthError, CommonAuthWebview } from '../backend'
 import { awsIdSignIn } from '../../../../codewhisperer/util/showSsoPrompt'
@@ -47,14 +47,25 @@ export class AmazonQLoginWebview extends CommonAuthWebview {
                 const connections: SsoConnection[] = await importedApi?.listConnections()
                 connections.forEach(async (connection: SsoConnection) => {
                     if (connection.id === connectionId) {
-                        getLogger().info(`auth: create connection from existing connection id ${connectionId}`)
-                        const conn = await Auth.instance.createConnection({
-                            type: connection.type,
-                            ssoRegion: connection.ssoRegion,
-                            startUrl: connection.startUrl,
-                            scopes: amazonQScopes,
-                        })
-                        await AuthUtil.instance.secondaryAuth.useNewConnection(conn)
+                        if (connection.scopes?.includes(scopesCodeWhispererChat[0])) {
+                            getLogger().info(`auth: re-use connection from existing connection id ${connectionId}`)
+                            const conn = await Auth.instance.createConnectionFromProfile(connection, {
+                                type: connection.type,
+                                ssoRegion: connection.ssoRegion,
+                                scopes: connection.scopes,
+                                startUrl: connection.startUrl,
+                            })
+                            await AuthUtil.instance.secondaryAuth.useNewConnection(conn)
+                        } else {
+                            getLogger().info(`auth: create connection from existing connection id ${connectionId}`)
+                            const conn = await Auth.instance.createConnection({
+                                type: connection.type,
+                                ssoRegion: connection.ssoRegion,
+                                startUrl: connection.startUrl,
+                                scopes: amazonQScopes,
+                            })
+                            await AuthUtil.instance.secondaryAuth.useNewConnection(conn)
+                        }
                     }
                 })
             }

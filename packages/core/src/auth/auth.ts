@@ -876,6 +876,12 @@ export class Auth implements AuthService, ConnectionManager {
             ? localizedText.builderId()
             : `${localizedText.iamIdentityCenter} (${truncatedUrl})`
     }
+
+    public async createConnectionFromProfile(connection: Connection, profile: SsoProfile) {
+        const storedProfile = await this.store.addProfile(connection.id, profile)
+        await this.updateConnectionState(connection.id, 'valid')
+        return this.getSsoConnection(connection.id, storedProfile)
+    }
 }
 /**
  * Returns true if credentials are provided by the environment (ex. via ~/.aws/)
