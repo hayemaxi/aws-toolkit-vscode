@@ -49,7 +49,7 @@ export class AmazonQLoginWebview extends CommonAuthWebview {
                     if (connection.id === connectionId) {
                         if (connection.scopes?.includes(scopesCodeWhispererChat[0])) {
                             getLogger().info(`auth: re-use connection from existing connection id ${connectionId}`)
-                            const conn = await Auth.instance.createConnectionFromProfile(connection, {
+                            const conn = await Auth.instance.createSharedConnection(connection, {
                                 type: connection.type,
                                 ssoRegion: connection.ssoRegion,
                                 scopes: connection.scopes,

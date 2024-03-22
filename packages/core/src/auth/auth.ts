@@ -293,6 +293,14 @@ export class Auth implements AuthService, ConnectionManager {
         }
     }
 
+    public async clearSharedConnection(connection: Connection): Promise<void> {
+        const connId = connection.id
+        const profile = this.store.getProfile(connId)
+        if (profile) {
+            await this.store.deleteProfile(connId)
+        }
+    }
+
     public async deleteConnection(connection: Pick<Connection, 'id'>): Promise<void> {
         const connId = connection.id
         const profile = this.store.getProfile(connId)
@@ -877,10 +885,23 @@ export class Auth implements AuthService, ConnectionManager {
             : `${localizedText.iamIdentityCenter} (${truncatedUrl})`
     }
 
-    public async createConnectionFromProfile(connection: Connection, profile: SsoProfile) {
-        const storedProfile = await this.store.addProfile(connection.id, profile)
-        await this.updateConnectionState(connection.id, 'valid')
-        return this.getSsoConnection(connection.id, storedProfile)
+    public async createSharedConnection(
+        connection: Connection,
+        profile: SsoProfile
+    ): Promise<SsoConnection & StatefulConnection> {
+        const id = connection.id
+        const storedProfile = await this.store.addProfile(id, profile)
+        // trust it as valid, invalid it if getToken fails
+        await this.updateConnectionState(id, 'valid')
+        const provider = this.getTokenProvider(id, storedProfile)
+        // mark connection as shared
+        return {
+            id,
+            ...profile,
+            state: storedProfile.metadata.connectionState,
+            label: 'shared',
+            getToken: () => this.getToken(connection.id, provider),
+        }
     }
 }
 /**

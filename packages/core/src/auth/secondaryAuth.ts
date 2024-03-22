@@ -182,8 +182,13 @@ export class SecondaryAuth<T extends Connection = Connection> {
      */
     public async deleteConnection() {
         if (this.activeConnection) {
-            await this.auth.deleteConnection(this.activeConnection)
-            await this.clearSavedConnection()
+            if (this.activeConnection.label !== 'shared') {
+                await this.auth.deleteConnection(this.activeConnection)
+                await this.clearSavedConnection()
+            } else {
+                await this.auth.clearSharedConnection(this.activeConnection)
+                await this.clearSavedConnection()
+            }
         }
     }
 
