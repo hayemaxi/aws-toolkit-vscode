@@ -4,7 +4,7 @@
  */
 import * as vscode from 'vscode'
 import { SsoConnection, scopesCodeWhispererChat } from '../../../../auth/connection'
-import { AuthUtil, amazonQScopes } from '../../../../codewhisperer/util/authUtil'
+import { AuthUtil } from '../../../../codewhisperer/util/authUtil'
 import { AuthError, CommonAuthWebview } from '../backend'
 import { awsIdSignIn } from '../../../../codewhisperer/util/showSsoPrompt'
 import { connectToEnterpriseSso } from '../../../../codewhisperer/util/getStartUrl'
@@ -58,15 +58,8 @@ export class AmazonQLoginWebview extends CommonAuthWebview {
                             await AuthUtil.instance.secondaryAuth.useNewConnection(conn)
                         } else {
                             getLogger().info(`auth: create connection from existing connection id ${connectionId}`)
-                            const conn = await Auth.instance.createConnection({
-                                type: connection.type,
-                                ssoRegion: connection.ssoRegion,
-                                scopes: amazonQScopes,
-                                startUrl: connection.startUrl,
-                            })
-                            await AuthUtil.instance.secondaryAuth.useNewConnection(conn)
+                            return this.startEnterpriseSetup(connection.startUrl, connection.ssoRegion)
                         }
-                        await vscode.commands.executeCommand('setContext', 'aws.amazonq.showLoginView', false)
                     }
                 })
             }
