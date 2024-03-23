@@ -45,7 +45,6 @@ function getAmazonQCodeWhispererNodes() {
     if (!AuthUtil.instance.isConnected()) {
         return [amazonq.createSignIn('item'), createLearnMore()]
     }
-
     if (vsCodeState.isFreeTierLimitReached) {
         if (hasVendedIamCredentials()) {
             return [createFreeTierLimitMet('item'), createOpenReferenceLog()]

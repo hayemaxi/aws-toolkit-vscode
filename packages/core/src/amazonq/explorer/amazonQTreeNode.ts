@@ -91,7 +91,6 @@ export class AmazonQNode implements TreeNode {
             if (AmazonQNode.amazonQState !== 'connected') {
                 return [createSignIn('tree'), createLearnMoreNode()]
             }
-
             return [
                 vsCodeState.isFreeTierLimitReached ? createFreeTierLimitMet('tree') : switchToAmazonQNode('tree'),
                 createNewMenuButton(),

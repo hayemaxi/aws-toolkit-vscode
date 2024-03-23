@@ -58,14 +58,16 @@ export class AmazonQLoginWebview extends CommonAuthWebview {
                             await AuthUtil.instance.secondaryAuth.useNewConnection(conn)
                         } else {
                             getLogger().info(`auth: create connection from existing connection id ${connectionId}`)
-                            const conn = await Auth.instance.createConnection({
+                            const conn = await Auth.instance.createConnectionFromProfile(connection, {
                                 type: connection.type,
                                 ssoRegion: connection.ssoRegion,
+                                scopes: connection.scopes,
                                 startUrl: connection.startUrl,
-                                scopes: amazonQScopes,
                             })
-                            await AuthUtil.instance.secondaryAuth.useNewConnection(conn)
+                            const connWithScopes = await AuthUtil.instance.secondaryAuth.addScopes(conn, amazonQScopes)
+                            await AuthUtil.instance.secondaryAuth.useNewConnection(connWithScopes)
                         }
+                        await vscode.commands.executeCommand('setContext', 'aws.amazonq.showLoginView', false)
                     }
                 })
             }
@@ -81,21 +83,21 @@ export class AmazonQLoginWebview extends CommonAuthWebview {
         return this.ssoSetup('startCodeWhispererBuilderIdSetup', async () => {
             try {
                 await awsIdSignIn()
-                AuthUtil.instance.hasAlreadySeenMigrationAuthScreen = true
                 await vscode.window.showInformationMessage('AmazonQ: Successfully connected to AWS Builder ID')
+                await vscode.commands.executeCommand('setContext', 'aws.amazonq.showLoginView', false)
             } finally {
                 this.notifyToolkit()
             }
         })
     }
 
-    startEnterpriseSetup(startUrl: string, region: string): Promise<AuthError | undefined> {
+    async startEnterpriseSetup(startUrl: string, region: string): Promise<AuthError | undefined> {
         return this.ssoSetup('startCodeWhispererEnterpriseSetup', async () => {
             try {
                 await connectToEnterpriseSso(startUrl, region)
-                AuthUtil.instance.hasAlreadySeenMigrationAuthScreen = true
                 this.notifyToolkit()
                 void vscode.window.showInformationMessage('AmazonQ: Successfully connected to AWS IAM Identity Center')
+                await vscode.commands.executeCommand('setContext', 'aws.amazonq.showLoginView', false)
             } finally {
                 this.notifyToolkit()
             }
