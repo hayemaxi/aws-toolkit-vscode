@@ -58,14 +58,13 @@ export class AmazonQLoginWebview extends CommonAuthWebview {
                             await AuthUtil.instance.secondaryAuth.useNewConnection(conn)
                         } else {
                             getLogger().info(`auth: create connection from existing connection id ${connectionId}`)
-                            const conn = await Auth.instance.createConnectionFromProfile(connection, {
+                            const conn = await Auth.instance.createConnection({
                                 type: connection.type,
                                 ssoRegion: connection.ssoRegion,
-                                scopes: connection.scopes,
+                                scopes: amazonQScopes,
                                 startUrl: connection.startUrl,
                             })
-                            const connWithScopes = await AuthUtil.instance.secondaryAuth.addScopes(conn, amazonQScopes)
-                            await AuthUtil.instance.secondaryAuth.useNewConnection(connWithScopes)
+                            await AuthUtil.instance.secondaryAuth.useNewConnection(conn)
                         }
                         await vscode.commands.executeCommand('setContext', 'aws.amazonq.showLoginView', false)
                     }
