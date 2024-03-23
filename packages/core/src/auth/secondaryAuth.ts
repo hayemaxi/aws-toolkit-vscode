@@ -188,6 +188,8 @@ export class SecondaryAuth<T extends Connection = Connection> {
             } else {
                 await this.auth.clearSharedConnection(this.activeConnection)
                 await this.clearSavedConnection()
+                this.#activeConnection = undefined
+                await vscode.commands.executeCommand('aws.codeWhisperer.refreshStatusBar')
             }
         }
     }
