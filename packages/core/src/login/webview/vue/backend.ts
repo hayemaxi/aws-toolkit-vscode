@@ -114,4 +114,6 @@ export abstract class CommonAuthWebview extends VueWebview {
     async listConnections(): Promise<Connection[]> {
         return Auth.instance.listConnections()
     }
+
+    abstract quitLoginScreen(): Promise<void>
 }
