@@ -115,6 +115,6 @@ export class AmazonQLoginWebview extends CommonAuthWebview {
     }
 
     async quitLoginScreen() {
-        await vscode.commands.executeCommand('setContext', 'aws.amazonq.showAuthView', false)
+        throw new Error('Method not implemented.')
     }
 }
