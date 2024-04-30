@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 import { fromExtensionManifest, migrateSetting } from '../../shared/settings'
+import globals from '../../shared/extensionGlobals'
+import { codewhispererSettingsImportedKey } from '../models/constants'
 
 const description = {
     showInlineCodeSuggestionsWithCodeReferences: Boolean, // eslint-disable-line id-length
@@ -13,6 +15,10 @@ const description = {
 export class CodeWhispererSettings extends fromExtensionManifest('amazonQ', description) {
     // TODO: Remove after a few releases
     public async importSettings() {
+        if (globals.context.globalState.get<boolean>(codewhispererSettingsImportedKey)) {
+            return
+        }
+
         await migrateSetting(
             { key: 'aws.codeWhisperer.includeSuggestionsWithCodeReferences', type: Boolean },
             { key: 'amazonQ.showInlineCodeSuggestionsWithCodeReferences' }
@@ -25,6 +31,8 @@ export class CodeWhispererSettings extends fromExtensionManifest('amazonQ', desc
             { key: 'aws.codeWhisperer.shareCodeWhispererContentWithAWS', type: Boolean },
             { key: 'amazonQ.shareContentWithAWS' }
         )
+
+        await globals.context.globalState.update(codewhispererSettingsImportedKey, true)
     }
 
     public isSuggestionsWithCodeReferencesEnabled(): boolean {
