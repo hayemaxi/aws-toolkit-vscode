@@ -48,8 +48,6 @@ import { validateIsNewSsoUrl, validateSsoUrlFormat } from './sso/validation'
 import { getLogger } from '../shared/logger'
 import { isValidAmazonQConnection, isValidCodeWhispererCoreConnection } from '../codewhisperer/util/authUtil'
 import { authHelpUrl } from '../shared/constants'
-import { getResourceFromTreeNode } from '../shared/treeview/utils'
-import { Instance } from '../shared/utilities/typeConstructors'
 import { openUrl } from '../shared/utilities/vsCodeUtils'
 import { AuthFormId } from '../login/webview/vue/types'
 import { extensionVersion } from '../shared/vscode/env'
@@ -524,7 +522,7 @@ export class AuthNode implements TreeNode<Auth> {
                 item.command = authCommands().reauth.build(this.resource, conn).asCommand({ title: 'Reauthenticate' })
             }
         } else {
-            item.command = authCommands().switchConnections.build(this.resource).asCommand({ title: 'Login' })
+            item.command = { title: 'Login', command: 'aws.toolkit.auth.switchConnections' }
             item.iconPath = conn !== undefined ? getConnectionIcon(conn) : undefined
         }
 
@@ -704,17 +702,8 @@ export class ExtensionUse {
 }
 
 type AuthCommands = {
-    switchConnections: RegisteredCommand<(auth: Auth | TreeNode | unknown) => Promise<void>>
-    help: RegisteredCommand<() => Promise<void>>
-    signout: RegisteredCommand<() => Promise<void>>
     addConnection: RegisteredCommand<() => Promise<void>>
     reauth: RegisteredCommand<(auth: Auth, conn: Connection) => Promise<Connection>>
-    autoConnect: RegisteredCommand<() => Promise<void>>
-    useIamCredentials: RegisteredCommand<(auth: Auth) => Promise<void>>
-    logout: RegisteredCommand<() => Promise<void>>
-    profileEdit: RegisteredCommand<() => Promise<void>>
-    profileCreate: RegisteredCommand<() => Promise<void>>
-    login: RegisteredCommand<() => Promise<void>>
 }
 let commands: AuthCommands
 
@@ -727,35 +716,7 @@ export function authCommands() {
 
 export function initAuthCommands(prefix: string) {
     setShowConnectPageCommand(`aws.${prefix}.auth.manageConnections`)
-    const switchConnections = Commands.register(
-        `aws.${prefix}.auth.switchConnections`,
-        (auth: Auth | TreeNode | unknown) => {
-            telemetry.ui_click.emit({ elementId: 'devtools_connectToAws' })
-
-            if (!(auth instanceof Auth)) {
-                try {
-                    auth = getResourceFromTreeNode(auth, Instance(Auth))
-                } catch {
-                    // Fall back in case this command is called from something in package.json.
-                    // If so, then the value of auth will be unusable.
-                    auth = Auth.instance
-                }
-            }
-
-            return promptAndUseConnection(auth as Auth)
-        }
-    )
     commands = {
-        switchConnections,
-        help: Commands.register(`aws.${prefix}.auth.help`, async () => {
-            await openUrl(vscode.Uri.parse(authHelpUrl))
-            telemetry.aws_help.emit()
-        }),
-
-        signout: Commands.register(`aws.${prefix}.auth.signout`, () => {
-            telemetry.ui_click.emit({ elementId: 'devtools_signout' })
-            return signout(Auth.instance)
-        }),
         addConnection: Commands.register(
             { id: `aws.${prefix}.auth.addConnection`, telemetryThrottleMs: false },
             async () => {
@@ -807,33 +768,6 @@ export function initAuthCommands(prefix: string) {
                 return await auth.reauthenticate(conn)
             } catch (err) {
                 throw ToolkitError.chain(err, 'Unable to authenticate connection')
-            }
-        }),
-        autoConnect: Commands.register(`_aws.${prefix}.auth.autoConnect`, () => Auth.instance.tryAutoConnect()),
-        useIamCredentials: Commands.register(`_aws.${prefix}.auth.useIamCredentials`, (auth: Auth) => {
-            telemetry.ui_click.emit({ elementId: 'explorer_IAMselect_VSCode' })
-
-            return promptAndUseConnection(auth, 'iam')
-        }),
-        logout: Commands.register(`aws.${prefix}.logout`, () => signout(Auth.instance)),
-        profileEdit: Commands.register(`aws.${prefix}.credentials.edit`, () =>
-            globals.awsContextCommands.onCommandEditCredentials()
-        ),
-        profileCreate: Commands.register(`aws.${prefix}.credentials.profile.create`, async () => {
-            try {
-                await globals.awsContextCommands.onCommandCreateCredentialsProfile()
-            } finally {
-                telemetry.aws_createCredentials.emit()
-            }
-        }),
-        login: Commands.register(`aws.${prefix}.login`, async () => {
-            const auth = Auth.instance
-            const connections = await auth.listConnections()
-            if (connections.length === 0) {
-                const source: AuthSource = vscodeComponent
-                return vscode.commands.executeCommand(getShowConnectPageCommand(), placeholder, source)
-            } else {
-                return switchConnections.execute(auth)
             }
         }),
     }

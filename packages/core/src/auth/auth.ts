@@ -135,6 +135,8 @@ export class Auth implements AuthService, ConnectionManager {
     /** Fired when a connection and its metadata has been completely deleted */
     public readonly onDidDeleteConnection = this.#onDidDeleteConnection.event
 
+    public readonly get reauth command
+
     public constructor(
         private readonly store: ProfileStore,
         private readonly iamProfileProvider = CredentialsProviderManager.getInstance(),
@@ -289,6 +291,12 @@ export class Auth implements AuthService, ConnectionManager {
 
         try {
             ;(await tokenProvider.getToken()) ?? (await tokenProvider.createToken())
+
+            // await this.store.addProfile(id, profile)
+            // const storedProfile = await this.updateConnectionState(id, 'valid')
+
+            // return this.getSsoConnection(id, storedProfile as StoredProfile<SsoProfile>)
+
             const storedProfile = await this.store.addProfile(id, profile)
             await this.updateConnectionState(id, 'valid')
 
