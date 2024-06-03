@@ -41,7 +41,6 @@ import {
     signoutCodeWhisperer,
     fetchFeatureConfigsCmd,
     toggleCodeScans,
-    registerToolkitApiCallback,
 } from './commands/basicCommands'
 import { sleep } from '../shared/utilities/timeoutUtils'
 import { ReferenceLogViewProvider } from './service/referenceLogViewProvider'
@@ -122,8 +121,6 @@ export async function activate(context: ExtContext): Promise<void> {
     ImportAdderProvider.instance
 
     context.extensionContext.subscriptions.push(
-        // register toolkit api callback
-        registerToolkitApiCallback.register(),
         signoutCodeWhisperer.register(auth),
         /**
          * Configuration change
@@ -575,7 +572,6 @@ export async function activate(context: ExtContext): Promise<void> {
         )
     }
 
-    await Commands.tryExecute('aws.amazonq.refreshConnectionCallback')
     container.ready()
 }
 
