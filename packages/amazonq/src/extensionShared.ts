@@ -26,7 +26,7 @@ import {
     getLogger,
     getMachineId,
 } from 'aws-core-vscode/shared'
-import { initializeAuth, CredentialsStore, LoginManager, AuthUtils } from 'aws-core-vscode/auth'
+import { initializeAuth, CredentialsStore, LoginManager, AuthUtils, Auth } from 'aws-core-vscode/auth'
 import { makeEndpointsProvider, registerGenericCommands } from 'aws-core-vscode'
 import { activate as activateCWChat } from 'aws-core-vscode/amazonq'
 import { activate as activateQGumby } from 'aws-core-vscode/amazonqGumby'
@@ -34,7 +34,7 @@ import { CommonAuthViewProvider, CommonAuthWebview } from 'aws-core-vscode/login
 import { isExtensionActive, VSCODE_EXTENSION_ID } from 'aws-core-vscode/utils'
 import { registerSubmitFeedback } from 'aws-core-vscode/feedback'
 import { telemetry, ExtStartUpSources } from 'aws-core-vscode/telemetry'
-import { DevFunction, updateDevMode } from 'aws-core-vscode/dev'
+import { DevOptions, updateDevMode } from 'aws-core-vscode/dev'
 import { getAuthStatus } from './auth/util'
 import { registerCommands } from './commands'
 
@@ -116,12 +116,11 @@ export async function activateShared(context: vscode.ExtensionContext, isWeb: bo
                 void vscode.window.showErrorMessage('AWS Toolkit must be installed to access the Developer Menu.')
                 return
             }
-            await vscode.commands.executeCommand('_aws.dev.invokeMenu', context, [
-                'editStorage',
-                'showEnvVars',
-                'deleteSsoConnections',
-                'expireSsoConnections',
-            ] as DevFunction[])
+            await vscode.commands.executeCommand('_aws.dev.invokeMenu', {
+                context,
+                auth: Auth.instance,
+                menuOptions: ['editStorage', 'showEnvVars', 'deleteSsoConnections', 'expireSsoConnections'],
+            } as DevOptions)
         }),
         vscode.window.registerWebviewViewProvider(authProvider.viewType, authProvider, {
             webviewOptions: {
