@@ -10,7 +10,7 @@ import { ExtContext } from '../shared/extensions'
 import { CodeCatalystRemoteSourceProvider } from './repos/remoteSourceProvider'
 import { CodeCatalystCommands, codecatalystConnectionsCmd } from './commands'
 import { GitExtension } from '../shared/extensions/git'
-import { CodeCatalystAuthenticationProvider } from './auth'
+import { CodeCatalystAuthenticationProvider, defaultScopes } from './auth'
 import { registerDevfileWatcher, updateDevfileCommand } from './devfile'
 import { DevEnvClient } from '../shared/clients/devenvClient'
 import { watchRestartingDevEnvs } from './reconnect'
@@ -18,12 +18,13 @@ import { ToolkitPromptSettings } from '../shared/settings'
 import { dontShow } from '../shared/localizedText'
 import { getIdeProperties, isCloud9 } from '../shared/extensionUtilities'
 import { Commands } from '../shared/vscode/commands2'
-import { createClient, getCodeCatalystConfig } from '../shared/clients/codecatalystClient'
+import { getCodeCatalystConfig } from '../shared/clients/codecatalystClient'
 import { isDevenvVscode } from './utils'
 import { codeCatalystConnectCommand, getThisDevEnv } from './model'
 import { getLogger } from '../shared/logger/logger'
 import { DevEnvActivityStarter } from './devEnv'
 import { learnMoreCommand, onboardCommand, reauth } from './explorer'
+import { hasExactScopes } from '../auth/connection'
 
 const localize = nls.loadMessageBundle()
 
@@ -43,15 +44,8 @@ export async function activate(ctx: ExtContext): Promise<void> {
 
     await authProvider.restore()
 
-    // if connection is shared with CodeWhisperer, check if CodeCatalyst scopes are expired
-    if (authProvider.activeConnection && authProvider.isSharedConn()) {
-        try {
-            await createClient(authProvider.activeConnection, undefined, undefined, undefined, {
-                showReauthPrompt: false,
-            })
-        } catch (err) {
-            getLogger().info('codecatalyst: createClient failed during activation: %s', err)
-        }
+    if (authProvider.isConnected() && !hasExactScopes(authProvider.activeConnection!, defaultScopes)) {
+        await authProvider.secondaryAuth.forgetConnection()
     }
 
     ctx.extensionContext.subscriptions.push(

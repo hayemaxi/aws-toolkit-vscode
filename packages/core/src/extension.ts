@@ -52,12 +52,13 @@ import { Auth } from './auth/auth'
 import { registerSubmitFeedback } from './feedback/vue/submitFeedback'
 import { activateShared, deactivateShared, emitUserState } from './extensionShared'
 import { learnMoreAmazonQCommand, qExtensionPageCommand, dismissQTree } from './amazonq/explorer/amazonQChildrenNodes'
-import { AuthUtil, isPreviousQUser } from './codewhisperer/util/authUtil'
+import { AuthUtil, codeWhispererCoreScopes, isPreviousQUser } from './codewhisperer/util/authUtil'
 import { installAmazonQExtension } from './codewhisperer/commands/basicCommands'
 import { isExtensionInstalled, VSCODE_EXTENSION_ID } from './shared/utilities'
 import { amazonQInstallDismissedKey } from './codewhisperer/models/constants'
 import { ExtensionUse } from './auth/utils'
 import { ExtStartUpSources } from './shared/telemetry'
+import { hasScopes, isSsoConnection } from './auth/connection'
 
 export { makeEndpointsProvider, registerGenericCommands } from './extensionShared'
 
@@ -120,6 +121,13 @@ export async function activate(context: vscode.ExtensionContext) {
             await codecatalyst.activate(extContext)
         } else {
             await vscode.commands.executeCommand('setContext', 'aws.isSageMaker', true)
+        }
+
+        // Clean up remaining logins after codecatalyst activated and ran its cleanup.
+        for (const conn of await Auth.instance.listConnections()) {
+            if (isSsoConnection(conn) && hasScopes(conn, codeWhispererCoreScopes)) {
+                await Auth.instance.forgetConnection(conn)
+            }
         }
 
         await activateCloudFormationTemplateRegistry(context)
