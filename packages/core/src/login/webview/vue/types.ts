@@ -39,7 +39,6 @@ export enum LoginOption {
     BUILDER_ID,
     ENTERPRISE_SSO,
     IAM_CREDENTIAL,
-    EXISTING_LOGINS,
 }
 
 /**
@@ -54,7 +53,6 @@ export type AuthUiClick =
     | 'auth_builderIdOption'
     | 'auth_credentialsOption'
     | 'auth_codecatalystOption'
-    | 'auth_existingAuthOption'
     | 'auth_regionSelection'
     | 'auth_codeCatalystSignIn'
     | 'auth_toolkitCloseButton'

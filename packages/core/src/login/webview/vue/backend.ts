@@ -13,7 +13,6 @@ import { trustedDomainCancellation } from '../../../auth/sso/model'
 import { handleWebviewError } from '../../../webviews/server'
 import { InvalidGrantException } from '@aws-sdk/client-sso-oidc'
 import {
-    AwsConnection,
     Connection,
     hasScopes,
     isBuilderIdConnection,
@@ -157,17 +156,6 @@ export abstract class CommonAuthWebview extends VueWebview {
         await vscode.commands.executeCommand('aws.explorer.focus')
     }
 
-    abstract fetchConnections(): Promise<AwsConnection[] | undefined>
-
-    /**
-     * Re-use connection that is pushed from Amazon Q to Toolkit.
-     * @param connectionId ID of the connection to re-use
-     * @param auto indicate whether this happened automatically (true), or the result of user action (false)
-     */
-    abstract useConnection(connectionId: string, auto: boolean): Promise<AuthError | undefined>
-
-    abstract findUsableConnection(connections: AwsConnection[]): AwsConnection | undefined
-
     async errorNotification(e: AuthError) {
         void vscode.window.showInformationMessage(`${e.text}`)
     }
@@ -283,15 +271,15 @@ export abstract class CommonAuthWebview extends VueWebview {
     /**
      * Return a comma-delimited list of features for which the connection has access to.
      */
-    getAuthEnabledFeatures(conn: SsoConnection | AwsConnection) {
+    getAuthEnabledFeatures(conn: SsoConnection) {
         const authEnabledFeatures: AuthEnabledFeatures[] = []
-        if (hasScopes(conn.scopes!, scopesCodeWhispererChat)) {
+        if (hasScopes(conn, scopesCodeWhispererChat)) {
             authEnabledFeatures.push('codewhisperer')
         }
-        if (hasScopes(conn.scopes!, scopesCodeCatalyst)) {
+        if (hasScopes(conn, scopesCodeCatalyst)) {
             authEnabledFeatures.push('codecatalyst')
         }
-        if (hasScopes(conn.scopes!, scopesSsoAccountAccess)) {
+        if (hasScopes(conn, scopesSsoAccountAccess)) {
             authEnabledFeatures.push('awsExplorer')
         }
 
