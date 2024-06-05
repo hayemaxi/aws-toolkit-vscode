@@ -58,8 +58,9 @@ import {
     loadLinkedProfilesIntoStore,
     scopesSsoAccountAccess,
     AwsConnection,
+    amazonQScopes,
 } from './connection'
-import { isSageMaker, isCloud9 } from '../shared/extensionUtilities'
+import { isSageMaker, isCloud9, isAmazonQ } from '../shared/extensionUtilities'
 import { telemetry } from '../shared/telemetry/telemetry'
 import { randomUUID } from '../common/crypto'
 
@@ -170,16 +171,32 @@ export class Auth implements AuthService, ConnectionManager {
         const shouldInvalidate = invalidate ?? true
         const profile = this.store.getProfileOrThrow(id)
         if (profile.type === 'sso') {
-            const provider = this.getSsoTokenProvider(id, profile)
+            let ssoProfile: StoredProfile<SsoProfile> = profile
+
+            // As part of splitting sessions, there may be edge cases or remaining connections that
+            // have amazon Q scopes (most likely from the Explorer).
+            // They should have been caught and updated upstream, but just in case we will also catch it here.
+            if (!isAmazonQ() && (ssoProfile.scopes ?? []).some(s => amazonQScopes.includes(s))) {
+                await this.updateConnection(
+                    { id },
+                    {
+                        ...ssoProfile,
+                        scopes: ssoProfile.scopes?.filter(s => !amazonQScopes.includes(s)),
+                    }
+                )
+                ssoProfile = this.store.getProfileOrThrow(id) as StoredProfile<SsoProfile>
+            }
+
+            const provider = this.getSsoTokenProvider(id, ssoProfile)
 
             // We cannot easily set isReAuth inside the createToken() call,
             // so we need to set it here.
             await telemetry.aws_loginWithBrowser.run(async span => {
-                span.record({ isReAuth: true, credentialStartUrl: profile.startUrl })
+                span.record({ isReAuth: true, credentialStartUrl: ssoProfile.startUrl })
                 await this.authenticate(id, () => provider.createToken(), shouldInvalidate)
             })
 
-            return this.getSsoConnection(id, profile)
+            return this.getSsoConnection(id, ssoProfile)
         } else {
             const provider = await this.getCredentialsProvider(id, profile)
             await this.authenticate(id, () => this.createCachedCredentials(provider), shouldInvalidate)

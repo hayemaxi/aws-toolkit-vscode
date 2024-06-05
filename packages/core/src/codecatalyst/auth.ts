@@ -46,6 +46,7 @@ export class CodeCatalystAuthStorage {
 
 export const onboardingUrl = vscode.Uri.parse('https://codecatalyst.aws/onboarding/view')
 
+// Includes account scopes on purpose. Uses of defaultScopes may depend on this.
 export const defaultScopes = [...scopesSsoAccountAccess, ...scopesCodeCatalyst]
 
 export const isUpgradeableConnection = (conn: Connection): conn is SsoConnection =>
@@ -307,8 +308,12 @@ export class CodeCatalystAuthenticationProvider {
 
             if (!conn) {
                 conn = await this.auth.createConnection(createSsoProfile(startUrl, region, defaultScopes))
-            } else if (!isValidCodeCatalystConnection(conn)) {
-                conn = await this.secondaryAuth.addScopes(conn, defaultScopes)
+            } else if (!isValidCodeCatalystConnection(conn) || !hasExactScopes(conn, defaultScopes)) {
+                // This connection already exists in toolkit (and has account SSO scopes at least)
+                // defaultScopes also includes SSO Scopes.
+                // HACK: To get rid of old shared connections, we will set scopes instead of adding scopes.
+                // This will get rid of any scope amazon Q scopes we may have had.
+                conn = await setScopes(conn, defaultScopes)
             }
 
             if (this.auth.getConnectionState(conn) === 'invalid') {

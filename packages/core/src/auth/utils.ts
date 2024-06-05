@@ -40,6 +40,7 @@ import {
     hasScopes,
     scopesSsoAccountAccess,
     isSsoConnection,
+    amazonQScopes,
 } from './connection'
 import { Commands, placeholder } from '../shared/vscode/commands2'
 import { Auth } from './auth'
@@ -102,9 +103,13 @@ export async function promptAndUseConnection(...[auth, type]: Parameters<typeof 
 
 export async function signout(auth: Auth, conn: Connection | undefined = auth.activeConnection) {
     if (conn?.type === 'sso') {
-        // TODO: does deleting the connection make sense UX-wise?
-        // this makes it disappear from the list of available connections
-        await auth.deleteConnection(conn)
+        if (isSsoConnection(conn) && conn.scopes?.some(s => amazonQScopes.includes(s))) {
+            await auth.forgetConnection(conn)
+        } else {
+            // TODO: does deleting the connection make sense UX-wise?
+            // this makes it disappear from the list of available connections
+            await auth.deleteConnection(conn)
+        }
 
         const iamConnections = (await auth.listConnections()).filter(c => c.type === 'iam')
         const fallbackConn = iamConnections.find(c => c.id === 'profile:default') ?? iamConnections[0]
@@ -345,7 +350,11 @@ export function createConnectionPrompter(auth: Auth, type?: 'iam' | 'iam-only' |
             // Set prompter in to a busy state so that
             // tests must wait for refresh to fully complete
             prompter.busy = true
-            await auth.deleteConnection(conn)
+            if (isSsoConnection(conn) && conn.scopes?.some(s => amazonQScopes.includes(s))) {
+                await auth.forgetConnection(conn)
+            } else {
+                await auth.deleteConnection(conn)
+            }
             refreshPrompter()
         }
     })

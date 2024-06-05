@@ -5,7 +5,7 @@
 
 import * as CodeWhispererConstants from '../models/constants'
 import { isValidResponse } from '../../shared/wizards/wizard'
-import { AuthUtil, amazonQScopes } from './authUtil'
+import { AuthUtil } from './authUtil'
 import { CancellationError } from '../../shared/utilities/timeoutUtils'
 import { ToolkitError } from '../../shared/errors'
 import { telemetry } from '../../shared/telemetry/telemetry'
@@ -13,6 +13,7 @@ import { createStartUrlPrompter, showRegionPrompter } from '../../auth/utils'
 import { Region } from '../../shared/regions/endpoints'
 import { Commands } from '../../shared/vscode/commands2'
 import { vsCodeState } from '../models/model'
+import { amazonQScopes } from '../../auth/connection'
 
 export const getStartUrl = async () => {
     const inputBox = await createStartUrlPrompter('IAM Identity Center', amazonQScopes)

@@ -26,6 +26,10 @@ export const scopesCodeWhispererChat = ['codewhisperer:conversations']
 export const scopesFeatureDev = ['codewhisperer:taskassist']
 export const scopesGumby = ['codewhisperer:transformations']
 
+/** Backwards compatibility for connections w pre-chat scopes */
+export const codeWhispererChatScopes = [...scopesCodeWhispererCore, ...scopesCodeWhispererChat]
+export const amazonQScopes = [...codeWhispererChatScopes, ...scopesGumby, ...scopesFeatureDev]
+
 export const defaultSsoRegion = 'us-east-1'
 
 type SsoType =

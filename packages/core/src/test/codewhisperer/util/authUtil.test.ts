@@ -4,18 +4,19 @@
  */
 
 import assert from 'assert'
-import {
-    AuthStates,
-    AuthUtil,
-    amazonQScopes,
-    codeWhispererChatScopes,
-    codeWhispererCoreScopes,
-} from '../../../codewhisperer/util/authUtil'
+import { AuthStates, AuthUtil } from '../../../codewhisperer/util/authUtil'
 import { getTestWindow } from '../../shared/vscode/window'
 import { SeverityLevel } from '../../shared/vscode/message'
 import { createBuilderIdProfile, createSsoProfile, createTestAuth } from '../../credentials/testUtil'
 import { assertTelemetry, captureEventOnce, tryRegister } from '../../testUtil'
-import { Connection, isAnySsoConnection, isBuilderIdConnection } from '../../../auth/connection'
+import {
+    Connection,
+    isAnySsoConnection,
+    isBuilderIdConnection,
+    scopesCodeWhispererCore,
+    amazonQScopes,
+    codeWhispererChatScopes,
+} from '../../../auth/connection'
 import { Auth } from '../../../auth/auth'
 import { openAmazonQWalkthrough } from '../../../amazonq/onboardingPage/walkthrough'
 import { vscodeComponent } from '../../../shared/vscode/commands2'
@@ -51,7 +52,7 @@ describe('AuthUtil', async function () {
 
     it('if there IS an existing AwsBuilderID conn, it will upgrade the scopes and use it', async function () {
         const existingBuilderId = await auth.createConnection(
-            createBuilderIdProfile({ scopes: codeWhispererCoreScopes })
+            createBuilderIdProfile({ scopes: scopesCodeWhispererCore })
         )
         getTestWindow().onDidShowQuickPick(async picker => {
             await picker.untilReady()
@@ -182,7 +183,7 @@ describe('AuthUtil', async function () {
 
     it('reauthenticates IdC connection that already has all scopes', async function () {
         const conn = await auth.createInvalidSsoConnection(
-            createSsoProfile({ startUrl: enterpriseSsoStartUrl, scopes: codeWhispererCoreScopes })
+            createSsoProfile({ startUrl: enterpriseSsoStartUrl, scopes: scopesCodeWhispererCore })
         )
         await auth.useConnection(conn)
 
@@ -195,7 +196,7 @@ describe('AuthUtil', async function () {
     })
 
     it('reauthenticate adds missing Builder ID scopes', async function () {
-        const conn = await auth.createInvalidSsoConnection(createBuilderIdProfile({ scopes: codeWhispererCoreScopes }))
+        const conn = await auth.createInvalidSsoConnection(createBuilderIdProfile({ scopes: scopesCodeWhispererCore }))
         await auth.useConnection(conn)
 
         // method under test
@@ -208,7 +209,7 @@ describe('AuthUtil', async function () {
 
     it('reauthenticate adds missing Amazon Q IdC scopes', async function () {
         const conn = await auth.createInvalidSsoConnection(
-            createSsoProfile({ startUrl: enterpriseSsoStartUrl, scopes: codeWhispererCoreScopes })
+            createSsoProfile({ startUrl: enterpriseSsoStartUrl, scopes: scopesCodeWhispererCore })
         )
         await auth.useConnection(conn)
 
@@ -310,7 +311,7 @@ describe('getChatAuthState()', function () {
 
     describe('Builder ID', function () {
         it('indicates only CodeWhisperer core is connected when only CW core scopes are set', async function () {
-            const conn = await auth.createConnection(createBuilderIdProfile({ scopes: codeWhispererCoreScopes }))
+            const conn = await auth.createConnection(createBuilderIdProfile({ scopes: scopesCodeWhispererCore }))
             createToken(conn)
             await auth.useConnection(conn)
 
@@ -353,7 +354,7 @@ describe('getChatAuthState()', function () {
     describe('Identity Center', function () {
         it('indicates only CW core is connected when only CW core scopes are set', async function () {
             const conn = await auth.createConnection(
-                createSsoProfile({ startUrl: enterpriseSsoStartUrl, scopes: codeWhispererCoreScopes })
+                createSsoProfile({ startUrl: enterpriseSsoStartUrl, scopes: scopesCodeWhispererCore })
             )
             createToken(conn)
             await auth.useConnection(conn)

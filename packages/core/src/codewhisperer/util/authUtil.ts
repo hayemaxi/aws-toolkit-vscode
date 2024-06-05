@@ -20,11 +20,10 @@ import {
     isIamConnection,
     isSsoConnection,
     isBuilderIdConnection,
-    scopesCodeWhispererChat,
-    scopesFeatureDev,
-    scopesGumby,
     isIdcSsoConnection,
     hasExactScopes,
+    codeWhispererChatScopes,
+    amazonQScopes,
 } from '../../auth/connection'
 import { getLogger } from '../../shared/logger'
 import { Commands } from '../../shared/vscode/commands2'
@@ -33,11 +32,6 @@ import { onceChanged, once } from '../../shared/utilities/functionUtils'
 import { indent } from '../../shared/utilities/textUtilities'
 import { showReauthenticateMessage } from '../../shared/utilities/messages'
 import { showAmazonQWalkthroughOnce } from '../../amazonq/onboardingPage/walkthrough'
-
-/** Backwards compatibility for connections w pre-chat scopes */
-export const codeWhispererCoreScopes = [...scopesCodeWhispererCore]
-export const codeWhispererChatScopes = [...codeWhispererCoreScopes, ...scopesCodeWhispererChat]
-export const amazonQScopes = [...codeWhispererChatScopes, ...scopesGumby, ...scopesFeatureDev]
 
 /**
  * "Core" are the CW scopes that existed before the addition of new scopes
@@ -54,7 +48,7 @@ export const isValidCodeWhispererCoreConnection = (conn?: Connection): conn is C
 
     return (
         (isCloud9('codecatalyst') && isIamConnection(conn)) ||
-        (isSsoConnection(conn) && hasScopes(conn, codeWhispererCoreScopes))
+        (isSsoConnection(conn) && hasScopes(conn, scopesCodeWhispererCore))
     )
 }
 /** Superset that includes all of CodeWhisperer + Amazon Q */

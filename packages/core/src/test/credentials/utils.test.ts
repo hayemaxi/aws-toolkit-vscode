@@ -6,9 +6,8 @@ import * as vscode from 'vscode'
 import assert from 'assert'
 import { FakeExtensionContext } from '../fakeExtensionContext'
 import { BuilderIdKind, ExtensionUse, SsoKind, hasBuilderId, hasIamCredentials, hasSso } from '../../auth/utils'
-import { Connection, SsoConnection, scopesCodeCatalyst } from '../../auth/connection'
+import { Connection, SsoConnection, amazonQScopes, scopesCodeCatalyst } from '../../auth/connection'
 import { builderIdConnection, iamConnection, ssoConnection } from './testUtil'
-import { amazonQScopes } from '../../codewhisperer/util/authUtil'
 
 describe('ExtensionUse.isFirstUse()', function () {
     let fakeState: vscode.Memento
