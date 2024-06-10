@@ -121,6 +121,13 @@ interface ConnectionStateChangeEvent {
 
 export type AuthType = Auth
 
+type DeclaredConnection = {
+    startUrl: string
+    region: string
+    source: string
+    id?: string
+}
+
 export class Auth implements AuthService, ConnectionManager {
     readonly #ssoCache = getCache()
     readonly #validationErrors = new Map<Connection['id'], Error>()
@@ -149,6 +156,11 @@ export class Auth implements AuthService, ConnectionManager {
 
     public get hasConnections() {
         return this.store.listProfiles().length !== 0
+    }
+
+    private readonly _declaredConnections: { [key: string]: DeclaredConnection } = {}
+    public get declaredConnections() {
+        return Object.values(this._declaredConnections)
     }
 
     public async restorePreviousSession(): Promise<Connection | undefined> {
@@ -933,21 +945,6 @@ export class Auth implements AuthService, ConnectionManager {
             : `${localizedText.iamIdentityCenter} (${truncatedUrl})`
     }
 
-    // Used by Amazon Q to re-use connection from AWS Toolkit listConnection API response
-    public async createConnectionFromApi(connection: AwsConnection) {
-        getLogger().info(`Reusing connection ${connection.id}`)
-        const profile = {
-            type: connection.type,
-            ssoRegion: connection.ssoRegion,
-            scopes: connection.scopes,
-            startUrl: connection.startUrl,
-        } as SsoProfile
-        const id = connection.id
-        const storedProfile = await this.store.addProfile(id, profile)
-        await this.updateConnectionState(id, connection.state)
-        return this.getSsoConnection(id, storedProfile)
-    }
-
     // Used by AWS Toolkit to update connection status & scope when this connection is updated by Amazon Q
     // If such connection does not exist, create one with same id.
     // Otherwise, update its scope and/or state.
@@ -980,33 +977,19 @@ export class Auth implements AuthService, ConnectionManager {
         }
     }
 
-    // Used by Amazon Q to update connection status & scope when this connection is updated by AWS Toolkit
-    // do not create connection in Q for each change event from Toolkit
-    public async onConnectionUpdate(connection: AwsConnection) {
-        const conn = await this.getConnection({ id: connection.id })
-        if (conn) {
-            const profile = {
-                type: connection.type,
-                ssoRegion: connection.ssoRegion,
-                scopes: connection.scopes,
-                startUrl: connection.startUrl,
-            } as SsoProfile
-            await this.store.updateProfile(connection.id, profile)
-
-            await this.store.updateMetadata(connection.id, { connectionState: connection.state })
+    public declareConnectionFromApi(conn: Pick<AwsConnection, 'id' | 'startUrl' | 'ssoRegion'>, source: string) {
+        getLogger().debug(`Declare connection ${conn.id} from API with startUrl: ${conn.startUrl}`)
+        this._declaredConnections[conn.id] = {
+            startUrl: conn.startUrl,
+            region: conn.ssoRegion,
+            source,
+            id: conn.id,
         }
     }
 
-    // Used by Amazon Q to delete connection status & scope when this deletion is made by AWS Toolkit
-    // NO event should be emitted from this deletion
-    // Do not actually perform the delete because toolkit has done the deletion
-    // Delete the momento states only.
-    public async onDeleteConnection(id: string) {
-        const profile = this.store.getProfile(id)
-        if (profile) {
-            await this.store.deleteProfile(id)
-            await this.store.setCurrentProfileId(undefined)
-        }
+    public undeclareConnectionFromApi(connId: string) {
+        getLogger().debug(`Undeclared connection ${connId}`)
+        delete this._declaredConnections[connId]
     }
 }
 /**

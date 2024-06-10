@@ -50,6 +50,21 @@ export const awsToolkitApi = {
             },
 
             /**
+             * Declares a connection to toolkit to re-use SSO SSO metadata (e.g. region, startURL),
+             * but the connection is not re-used directly. These do not persist across restarts.
+             * @param connection The AWS connection of the source extension that is intended to be shared with toolkit
+             */
+            declareConnection(conn: AwsConnection, source: string) {
+                getLogger().debug(`declareConnection: extension ${extensionId}, connection id ${conn.id}`)
+                Auth.instance.declareConnectionFromApi(conn, source)
+            },
+
+            undeclareConnection(connId: string) {
+                getLogger().debug(`declareConnection: extension ${extensionId}, connection id ${connId}`)
+                Auth.instance.undeclareConnectionFromApi(connId)
+            },
+
+            /**
              * Exposing deleteConnection API for other extension to push connection deletion event to AWS toolkit
              * @param id The connection id of the to be deleted connection in aws toolkit
              */
