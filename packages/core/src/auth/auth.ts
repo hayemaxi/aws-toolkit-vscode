@@ -924,21 +924,6 @@ export class Auth implements AuthService, ConnectionManager {
             : `${localizedText.iamIdentityCenter} (${truncatedUrl})`
     }
 
-    // Used by Amazon Q to re-use connection from AWS Toolkit listConnection API response
-    public async createConnectionFromApi(connection: AwsConnection) {
-        getLogger().info(`Reusing connection ${connection.id}`)
-        const profile = {
-            type: connection.type,
-            ssoRegion: connection.ssoRegion,
-            scopes: connection.scopes,
-            startUrl: connection.startUrl,
-        } as SsoProfile
-        const id = connection.id
-        const storedProfile = await this.store.addProfile(id, profile)
-        await this.updateConnectionState(id, connection.state)
-        return this.getSsoConnection(id, storedProfile)
-    }
-
     // Used by AWS Toolkit to update connection status & scope when this connection is updated by Amazon Q
     // If such connection does not exist, create one with same id.
     // Otherwise, update its scope and/or state.
