@@ -1,0 +1,4 @@
+{
+	"type": "Bug Fix",
+	"description": "Suggestions not available when using AWS Toolkit's Application Composer feature."
+}
