@@ -8,7 +8,7 @@ const localize = nls.loadMessageBundle()
 
 import * as vscode from 'vscode'
 import globals from '../../shared/extensionGlobals'
-import { ToolkitPromptSettings } from '../../shared/settings'
+import { PromptSettings } from '../../shared/settings'
 import { ChildProcess } from '../../shared/utilities/childProcess'
 import { showMessageWithCancel, showOutputMessage } from '../../shared/utilities/messages'
 import { formatDateTimestamp, removeAnsi } from '../../shared/utilities/textUtilities'
@@ -29,11 +29,7 @@ async function runCommandWizard(
 ): Promise<CommandWizardState & { container: Container }> {
     const container = getResourceFromTreeNode(param, Instance(Container))
 
-    const wizard = new CommandWizard(
-        container,
-        await ToolkitPromptSettings.instance.isPromptEnabled('ecsRunCommand'),
-        command
-    )
+    const wizard = new CommandWizard(container, await PromptSettings.instance.isPromptEnabled('ecsRunCommand'), command)
     const response = await wizard.run()
 
     if (!response) {
@@ -41,7 +37,7 @@ async function runCommandWizard(
     }
 
     if (response.confirmation === 'suppress') {
-        await ToolkitPromptSettings.instance.disablePrompt('ecsRunCommand')
+        await PromptSettings.instance.disablePrompt('ecsRunCommand')
     }
 
     return { container, ...response }
@@ -55,7 +51,7 @@ export enum EcsRunCommandPrompt {
 export async function toggleExecuteCommandFlag(
     service: Service,
     window = vscode.window,
-    settings = ToolkitPromptSettings.instance
+    settings = PromptSettings.instance
 ): Promise<void> {
     const yes = localize('AWS.generic.response.yes', 'Yes')
     const yesDontAskAgain = localize('AWS.message.prompt.yesDontAskAgain', "Yes, don't ask again")

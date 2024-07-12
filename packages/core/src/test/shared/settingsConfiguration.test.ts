@@ -10,7 +10,7 @@ import {
     DevSettings,
     Experiments,
     fromExtensionManifest,
-    ToolkitPromptSettings,
+    PromptSettings,
     Settings,
     testSetting,
 } from '../../shared/settings'
@@ -429,11 +429,11 @@ describe('PromptSetting', function () {
     const target = vscode.ConfigurationTarget.Workspace
 
     let settings: Settings
-    let sut: ToolkitPromptSettings
+    let sut: PromptSettings
 
     beforeEach(async function () {
         settings = new Settings(target)
-        sut = new ToolkitPromptSettings(settings)
+        sut = new PromptSettings(settings)
         await sut.reset()
     })
 

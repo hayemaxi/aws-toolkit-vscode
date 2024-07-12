@@ -14,7 +14,7 @@ import { CodeCatalystAuthenticationProvider } from './auth'
 import { registerDevfileWatcher, updateDevfileCommand } from './devfile'
 import { DevEnvClient } from '../shared/clients/devenvClient'
 import { watchRestartingDevEnvs } from './reconnect'
-import { ToolkitPromptSettings } from '../shared/settings'
+import { PromptSettings } from '../shared/settings'
 import { dontShow } from '../shared/localizedText'
 import { getIdeProperties, isCloud9 } from '../shared/extensionUtilities'
 import { Commands } from '../shared/vscode/commands2'
@@ -110,7 +110,7 @@ export async function activate(ctx: ExtContext): Promise<void> {
 
         await showReadmeFileOnFirstLoad(ctx.extensionContext.workspaceState)
 
-        const settings = ToolkitPromptSettings.instance
+        const settings = PromptSettings.instance
         if (await settings.isPromptEnabled('remoteConnected')) {
             const message = localize(
                 'AWS.codecatalyst.connectedMessage',

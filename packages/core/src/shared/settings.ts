@@ -6,7 +6,6 @@
 import * as vscode from 'vscode'
 import * as codecatalyst from './clients/codecatalystClient'
 import * as codewhisperer from '../codewhisperer/client/codewhisperer'
-import packageJson from '../../package.json'
 import { getLogger } from './logger'
 import { cast, FromDescriptor, Record, TypeConstructor, TypeDescriptor } from './utilities/typeConstructors'
 import { assertHasProps, ClassToInterfaceType, keys } from './utilities/tsUtils'
@@ -16,6 +15,7 @@ import { once, onceChanged } from './utilities/functionUtils'
 import { ToolkitError } from './errors'
 import { telemetry } from './telemetry/telemetry'
 import globals from './extensionGlobals'
+import { isAmazonQ } from './extensionUtilities'
 
 type Workspace = Pick<typeof vscode.workspace, 'getConfiguration' | 'onDidChangeConfiguration'>
 
@@ -473,14 +473,43 @@ export interface ResetableMemento extends vscode.Memento {
     reset(): Promise<void>
 }
 
-// The below types are used to split-out 'sections' from `package.json`
-// Obviously not ideal, but the alternative is to generate the properties
-// from implementations. Using types requires basically no logic but lacks
-// precision. We still need to manually specify what type something should be,
-// at least for anything beyond primitive types.
-const settingsProps = packageJson.contributes.configuration.properties
+/**
+ * All VSCode settings known to each extension. This allows us to have compile-time checking of
+ * most settings abstractions without having a local package.json containing all of the settings.
+ *
+ * TODO: Ideally this would live in each extension and not the core library. However, named settings
+ * access is deeply ingrained into the structure of the core lib.
+ */
+type AllSettings =
+    | 'aws.profile'
+    | 'aws.ecs.openTerminalCommand'
+    | 'aws.iot.maxItemsPerPage'
+    | 'aws.s3.maxItemsPerPage'
+    | 'aws.samcli.location'
+    | 'aws.samcli.lambdaTimeout'
+    | 'aws.samcli.legacyDeploy'
+    | 'aws.telemetry'
+    | 'aws.stepfunctions.asl.format.enable'
+    | 'aws.stepfunctions.asl.maxItemsComputed'
+    | 'aws.ssmDocument.ssm.maxItemsComputed'
+    | 'aws.cwl.limit'
+    | 'aws.samcli.manuallySelectedBuckets'
+    | 'aws.samcli.enableCodeLenses'
+    | 'aws.suppressPrompts'
+    | 'aws.experiments'
+    | 'aws.resources.enabledResources'
+    | 'aws.lambda.recentlyUploaded'
+    | 'aws.accessAnalyzer.policyChecks.checkNoNewAccessFilePath'
+    | 'aws.accessAnalyzer.policyChecks.checkAccessNotGrantedFilePath'
+    | 'aws.accessAnalyzer.policyChecks.cloudFormationParameterFilePath'
+    | 'amazonQ.telemetry'
+    | 'amazonQ.suppressPrompts'
+    | 'amazonQ.showInlineCodeSuggestionsWithCodeReferences'
+    | 'amazonQ.importRecommendationForInlineCodeSuggestions'
+    | 'amazonQ.shareContentWithAWS'
 
-type SettingsProps = typeof settingsProps
+// Current extension configuration
+const settingsProps = globals.context.extension.packageJSON.contributes.configuration.properties
 
 type Split<T, S extends string> = T extends `${infer L}${S}${infer R}` ? [L, ...Split<R, S>] : [T]
 type Pop<T> = T extends [...infer R, infer _] ? R : never
@@ -492,8 +521,7 @@ type FromParts<T, K> = K extends [infer U, ...infer R]
         : T
     : T
 
-type Format<T> = { [P in keyof T]: FromParts<TypeConstructor, Split<P, '.'>> }[keyof T]
-type Config = Intersection<Format<SettingsProps>>
+type Format<T extends string> = { [P in T]: FromParts<TypeConstructor, Split<P, '.'>> }[T]
 
 type Join<T extends string[], S extends string> = T['length'] extends 1
     ? T[0]
@@ -513,7 +541,9 @@ type Select<T, K> = K extends [infer L, ...infer R]
         : never
     : never
 
-type Sections = { [P in keyof SettingsProps as Join<Pop<Split<P, '.'>>, '.'>]: Select<Config, Pop<Split<P, '.'>>> }
+type Sections = {
+    [P in AllSettings as Join<Pop<Split<P, '.'>>, '.'>]: Select<Intersection<Format<AllSettings>>, Pop<Split<P, '.'>>>
+}
 
 /**
  * Creates a class for manipulating specific sections of settings specified in `package.json`.
@@ -583,6 +613,9 @@ export function fromExtensionManifest<T extends TypeDescriptor & Partial<Section
     return Settings.define(section, descriptor)
 }
 
+const promptSection = isAmazonQ() ? 'amazonQ.suppressPrompts' : 'aws.suppressPrompts'
+const prompts = settingsProps[promptSection].properties
+
 /**
  * PromptSettings
  *
@@ -609,13 +642,17 @@ export function fromExtensionManifest<T extends TypeDescriptor & Partial<Section
  * TODO: Settings should be defined in individual extensions, and passed to the
  * core lib as necessary.
  */
-export const toolkitPrompts = settingsProps['aws.suppressPrompts'].properties
-type toolkitPromptName = keyof typeof toolkitPrompts
-export class ToolkitPromptSettings extends Settings.define(
-    'aws.suppressPrompts',
-    toRecord(keys(toolkitPrompts), () => Boolean)
+export class PromptSettings extends Settings.define(
+    promptSection,
+    toRecord(keys(prompts), () => Boolean)
 ) {
-    public async isPromptEnabled(promptName: toolkitPromptName): Promise<boolean> {
+    public async isPromptEnabled(promptName: string): Promise<boolean> {
+        // Runtime check
+        // TODO: Compile-time check
+        if (!(promptName in prompts)) {
+            throw new Error(`Invalid prompt setting: '${promptName}' for section '${promptSection}'`)
+        }
+
         try {
             return !this._getOrThrow(promptName, false)
         } catch (e) {
@@ -626,51 +663,21 @@ export class ToolkitPromptSettings extends Settings.define(
         }
     }
 
-    public async disablePrompt(promptName: toolkitPromptName): Promise<void> {
+    public async disablePrompt(promptName: string): Promise<void> {
         if (await this.isPromptEnabled(promptName)) {
             await this.update(promptName, true)
         }
     }
 
-    static #instance: ToolkitPromptSettings
+    static #instance: PromptSettings
 
     public static get instance() {
         return (this.#instance ??= new this())
     }
 }
 
-export const amazonQPrompts = settingsProps['amazonQ.suppressPrompts'].properties
-type amazonQPromptName = keyof typeof amazonQPrompts
-export class AmazonQPromptSettings extends Settings.define(
-    'amazonQ.suppressPrompts',
-    toRecord(keys(amazonQPrompts), () => Boolean)
-) {
-    public async isPromptEnabled(promptName: amazonQPromptName): Promise<boolean> {
-        try {
-            return !this._getOrThrow(promptName, false)
-        } catch (e) {
-            this._log('prompt check for "%s" failed: %s', promptName, (e as Error).message)
-            await this.reset()
-
-            return true
-        }
-    }
-
-    public async disablePrompt(promptName: amazonQPromptName): Promise<void> {
-        if (await this.isPromptEnabled(promptName)) {
-            await this.update(promptName, true)
-        }
-    }
-
-    static #instance: AmazonQPromptSettings
-
-    public static get instance() {
-        return (this.#instance ??= new this())
-    }
-}
-
-const experiments = settingsProps['aws.experiments'].properties
-type ExperimentName = keyof typeof experiments
+const experimentSection = 'aws.experiments'
+const experiments = settingsProps[experimentSection].properties
 
 /**
  * "Experiments" are for features that users must opt-in to use. Experimental implementations
@@ -696,10 +703,16 @@ type ExperimentName = keyof typeof experiments
  * ```
  */
 export class Experiments extends Settings.define(
-    'aws.experiments',
+    experimentSection,
     toRecord(keys(experiments), () => Boolean)
 ) {
-    public async isExperimentEnabled(name: ExperimentName): Promise<boolean> {
+    public async isExperimentEnabled(name: string): Promise<boolean> {
+        // Runtime check
+        // TODO: Compile-time check
+        if (!(name in experiments)) {
+            throw new Error(`Invalid exeriments setting: '${name}' for section '${experimentSection}'`)
+        }
+
         try {
             return this._getOrThrow(name, false)
         } catch (error) {
@@ -868,8 +881,13 @@ export class DevSettings extends Settings.define('aws.dev', devSettings) {
  */
 export async function migrateSetting<T, U = T>(
     from: { key: string; type: TypeConstructor<T> },
-    to: { key: keyof SettingsProps; transform?: (value: T) => U }
+    to: { key: `${keyof Sections}.${string}`; transform?: (value: T) => U }
 ) {
+    // Runtime check
+    // TODO: Compile-time check (if possible)
+    if (!(to.key in settingsProps)) {
+        throw new Error(`Cannot migrate setting, new key not found: ${to.key}`)
+    }
     const config = vscode.workspace.getConfiguration()
 
     const migrateForScope = async (scope: vscode.ConfigurationTarget) => {
@@ -916,6 +934,6 @@ export async function openSettings(prefix: string): Promise<void> {
  *
  * This only works for keys that are considered "top-level", e.g. keys of {@link settingsProps}.
  */
-export async function openSettingsId<K extends keyof SettingsProps>(key: K): Promise<void> {
+export async function openSettingsId(key: AllSettings): Promise<void> {
     await vscode.commands.executeCommand('workbench.action.openSettings', `@id:${key}`)
 }

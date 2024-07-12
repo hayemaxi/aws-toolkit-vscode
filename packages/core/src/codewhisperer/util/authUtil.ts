@@ -9,7 +9,7 @@ import { Auth } from '../../auth/auth'
 import { ToolkitError } from '../../shared/errors'
 import { getSecondaryAuth, setScopes } from '../../auth/secondaryAuth'
 import { isCloud9, isSageMaker } from '../../shared/extensionUtilities'
-import { AmazonQPromptSettings } from '../../shared/settings'
+import { PromptSettings } from '../../shared/settings'
 import {
     scopesCodeWhispererCore,
     createBuilderIdProfile,
@@ -348,7 +348,7 @@ export class AuthUtil {
             message: localizedText.connectionExpired('Amazon Q'),
             connect: localizedText.reauthenticate,
             suppressId: 'codeWhispererConnectionExpired',
-            settings: AmazonQPromptSettings.instance,
+            settings: PromptSettings.instance,
             reauthFunc: async () => {
                 await this.reauthenticate()
             },
