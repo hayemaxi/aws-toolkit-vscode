@@ -5,7 +5,6 @@
 
 import globals, { isWeb } from './extensionGlobals'
 
-import type * as packageJson from '../../package.json'
 import * as fs from 'fs'
 import * as path from 'path'
 import { Uri, ThemeIcon, ThemeColor } from 'vscode'
@@ -16,9 +15,7 @@ import { getLogger } from './logger/logger'
 // Animation:
 // https://code.visualstudio.com/api/references/icons-in-labels#animation
 
-type ContributedIcon = keyof typeof packageJson.contributes.icons
 type IconPath = { light: Uri; dark: Uri; toString: () => string } | Icon
-type IconId = `vscode-${string}` | ContributedIcon
 
 /**
  * Gets an icon associated with the specified `id`.
@@ -88,10 +85,14 @@ export function addColor(icon: IconPath, color: string | ThemeColor): IconPath {
 }
 
 function resolveIconId(
-    id: IconId,
+    id: string,
     shouldUseCloud9 = isCloud9(),
     iconsPath = globals.context.asAbsolutePath(path.join('resources', 'icons'))
 ): IconPath {
+    if (!id.startsWith('vscode') || !(id in globals.context.extension.packageJSON.contributes.icons)) {
+        getLogger().error(`Unknown icon: '${id}'. Is it registered in extension's package.json?`)
+    }
+
     const [namespace, ...rest] = id.split('-')
     const name = rest.join('-')
 
