@@ -6,7 +6,6 @@
 import webfont from 'webfont'
 import * as path from 'path'
 import * as fs from 'fs-extra'
-import packageJson from '../../package.json'
 
 const fontId = 'aws-toolkit-icons'
 const projectDir = process.cwd() // root/packages/toolkit
@@ -20,6 +19,7 @@ const iconSources = [
     `../../node_modules/@vscode/codicons/src/icons/**/*.svg`,
     '!**/{cloud9,dark,light}/**',
 ]
+const packageJson = JSON.parse(fs.readFileSync(path.join(projectDir, 'package.json'), { encoding: 'utf-8' }))
 
 interface PackageIcon {
     readonly description: string
