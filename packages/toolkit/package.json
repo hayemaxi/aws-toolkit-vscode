@@ -3961,7 +3961,7 @@
         "webWatch": "npm run clean && npm run buildScripts && webpack --mode development --watch",
         "webCompile": "npm run clean && npm run buildScripts && webpack --config-name web",
         "webRun": "npx @vscode/test-web --open-devtools --browserOption=--disable-web-security --waitForDebugger=9222 --extensionDevelopmentPath=. .",
-        "package": "npm run copyPackageJson && ts-node ../../scripts/package.ts",
+        "package": "ts-node ../../scripts/package.ts",
         "install-plugin": "vsce package --ignoreFile '../.vscodeignore.packages' -o aws-toolkit-vscode-test.vsix && code --install-extension aws-toolkit-vscode-test.vsix",
         "format": "prettier --ignore-path ../../.prettierignore --check src scripts",
         "formatfix": "prettier --ignore-path ../../.prettierignore --write src scripts",
@@ -3969,8 +3969,6 @@
         "createRelease": "ts-node ../../scripts/createRelease.ts",
         "newChange": "ts-node ../../scripts/newChange.ts",
         "watch": "npm run clean && npm run buildScripts && tsc -watch -p ./",
-        "copyPackageJson": "ts-node ./scripts/build/handlePackageJson",
-        "restorePackageJson": "ts-node ./scripts/build/handlePackageJson --restore",
         "generatePackage": "ts-node ../../scripts/generateIcons.ts"
     },
     "devDependencies": {},
