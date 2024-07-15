@@ -12,7 +12,7 @@ import * as vscode from 'vscode'
 import { AwsContext } from '../awsContext'
 import { DefaultTelemetryService } from './telemetryService'
 import { getLogger } from '../logger'
-import { getComputeRegion, isAmazonQ, isCloud9, productName } from '../extensionUtilities'
+import { getComputeRegion, isCloud9, productName } from '../extensionUtilities'
 import { openSettingsId, Settings } from '../settings'
 import { TelemetryConfig, setupTelemetryId } from './util'
 import { isAutomation, isReleaseVersion } from '../vscode/env'
@@ -20,6 +20,7 @@ import { AWSProduct } from './clienttelemetry'
 import { DefaultTelemetryClient } from './telemetryClient'
 import { telemetry } from './telemetry'
 import { Commands } from '../vscode/commands2'
+import { isAmazonQ } from '../extensions'
 
 export const noticeResponseViewSettings = localize('AWS.telemetry.notificationViewSettings', 'Settings')
 export const noticeResponseOk = localize('AWS.telemetry.notificationOk', 'OK')

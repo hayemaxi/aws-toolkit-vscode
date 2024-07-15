@@ -15,7 +15,7 @@ import { once, onceChanged } from './utilities/functionUtils'
 import { ToolkitError } from './errors'
 import { telemetry } from './telemetry/telemetry'
 import globals from './extensionGlobals'
-import { isAmazonQ } from './extensionUtilities'
+import { isAmazonQ } from './extensions'
 
 type Workspace = Pick<typeof vscode.workspace, 'getConfiguration' | 'onDidChangeConfiguration'>
 

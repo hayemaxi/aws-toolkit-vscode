@@ -10,6 +10,8 @@ import { TelemetryService } from './telemetry/telemetryService'
 import { CredentialsStore } from '../auth/credentials/store'
 import { SamCliContext } from './sam/cli/samCliContext'
 import { UriHandler } from './vscode/uriHandler'
+import { once } from './utilities/functionUtils'
+import globals from './extensionGlobals'
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
 export const VSCODE_EXTENSION_ID = {
@@ -50,3 +52,16 @@ export interface ExtContext {
  * Version of the .vsix produced by package.ts with the --debug option.
  */
 export const extensionAlphaVersion = '99.0.0-SNAPSHOT'
+
+function _isAmazonQ() {
+    const id = globals.context.extension.id
+    const isToolkit = id === VSCODE_EXTENSION_ID.awstoolkit || id === VSCODE_EXTENSION_ID.awstoolkitcore
+    const isQ = id === VSCODE_EXTENSION_ID.amazonq
+    if (!isToolkit && !isQ) {
+        throw Error(`unexpected extension id: ${id}`) // sanity check
+    }
+    return isQ
+}
+
+/** True if the current extension is "Amazon Q", else the current extension is "AWS Toolkit". */
+export const isAmazonQ = once(_isAmazonQ)
