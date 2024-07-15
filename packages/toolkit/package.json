@@ -52,7 +52,29 @@
     "main": "./dist/src/extension",
     "browser": "./dist/src/extensionWeb",
     "engines": {
-        "npm": "^10.1.0"
+        "npm": "^10.1.0",
+        "vscode": "^1.68.0"
+    },
+    "scripts": {
+        "vscode:prepublish": "npm run clean && npm run buildScripts && webpack --mode production",
+        "buildScripts": "npm run generateNonCodeFiles && npm run copyFiles && npm run generatePackage && tsc -p ./ --noEmit",
+        "generateConfigurationAttributes": "ts-node ./scripts/build/generateConfigurationAttributes.ts",
+        "generateNonCodeFiles": "ts-node ../../scripts/generateNonCodeFiles.ts",
+        "copyFiles": "ts-node ./scripts/build/copyFiles.ts",
+        "clean": "ts-node ../../scripts/clean.ts dist/ LICENSE NOTICE quickStart*",
+        "compile": "npm run clean && npm run buildScripts && webpack",
+        "webWatch": "npm run clean && npm run buildScripts && webpack --mode development --watch",
+        "webCompile": "npm run clean && npm run buildScripts && webpack --config-name web",
+        "webRun": "npx @vscode/test-web --open-devtools --browserOption=--disable-web-security --waitForDebugger=9222 --extensionDevelopmentPath=. .",
+        "package": "ts-node ../../scripts/package.ts",
+        "install-plugin": "vsce package --ignoreFile '../.vscodeignore.packages' -o aws-toolkit-vscode-test.vsix && code --install-extension aws-toolkit-vscode-test.vsix",
+        "format": "prettier --ignore-path ../../.prettierignore --check src scripts",
+        "formatfix": "prettier --ignore-path ../../.prettierignore --write src scripts",
+        "lint": "echo 'Nothing to lint yet!'",
+        "createRelease": "ts-node ../../scripts/createRelease.ts",
+        "newChange": "ts-node ../../scripts/newChange.ts",
+        "watch": "npm run clean && npm run buildScripts && tsc -watch -p ./",
+        "generatePackage": "ts-node ../../scripts/generateIcons.ts --packageJson"
     },
     "contributes": {
         "configuration": {
@@ -3950,26 +3972,6 @@
                 "{git,gitlens,conflictResolution,vscode-local-history}:/**/*.tc.json": "default"
             }
         }
-    },
-    "scripts": {
-        "vscode:prepublish": "npm run clean && npm run buildScripts && webpack --mode production",
-        "buildScripts": "npm run generateNonCodeFiles && npm run copyFiles && npm run generatePackage && tsc -p ./ --noEmit",
-        "generateNonCodeFiles": "ts-node ../../scripts/generateNonCodeFiles.ts",
-        "copyFiles": "ts-node ./scripts/build/copyFiles.ts",
-        "clean": "ts-node ../../scripts/clean.ts dist/ LICENSE NOTICE quickStart*",
-        "compile": "npm run clean && npm run buildScripts && webpack",
-        "webWatch": "npm run clean && npm run buildScripts && webpack --mode development --watch",
-        "webCompile": "npm run clean && npm run buildScripts && webpack --config-name web",
-        "webRun": "npx @vscode/test-web --open-devtools --browserOption=--disable-web-security --waitForDebugger=9222 --extensionDevelopmentPath=. .",
-        "package": "ts-node ../../scripts/package.ts",
-        "install-plugin": "vsce package --ignoreFile '../.vscodeignore.packages' -o aws-toolkit-vscode-test.vsix && code --install-extension aws-toolkit-vscode-test.vsix",
-        "format": "prettier --ignore-path ../../.prettierignore --check src scripts",
-        "formatfix": "prettier --ignore-path ../../.prettierignore --write src scripts",
-        "lint": "echo 'Nothing to lint yet!'",
-        "createRelease": "ts-node ../../scripts/createRelease.ts",
-        "newChange": "ts-node ../../scripts/newChange.ts",
-        "watch": "npm run clean && npm run buildScripts && tsc -watch -p ./",
-        "generatePackage": "ts-node ../../scripts/generateIcons.ts"
     },
     "devDependencies": {},
     "dependencies": {

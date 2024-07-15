@@ -62,6 +62,8 @@ Additional quirks introduced by creating a core library from the original extens
 
 If you are adding a new setting to any extension, you should also add this setting to `AllSettings` [settings.ts](../packages/core/src/shared/settings.ts) to get compile-time type checks. Runtime checks will still fail CI regardless.
 
+If you are modifying or registering new debuggers in VS Code via the `debuggers` contribution point, you may need to regenerate the [definitions file](../packages/core/src/shared/sam/debugger/awsSamDebugConfiguration.gen.ts). After updating ['toolkit/package.json'](../packages/toolkit/package.json), run `npm run generateConfigurationAttributes -w packages/toolkit`
+
 ## Shared vs Common names
 
 In this repo, the keywords **"shared"** and **"common"** have specific meanings in the context of file/folder names.

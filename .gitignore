@@ -18,6 +18,7 @@ __pycache__
 
 # Auto generated definitions
 packages/*/src/**/*.gen.ts
+!packages/core/src/**/awsSamDebugConfiguration.gen.ts
 src.gen/*
 
 # Telemetry definition for testing adding telemetry
