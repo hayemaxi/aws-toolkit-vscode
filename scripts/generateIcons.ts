@@ -12,6 +12,7 @@ const projectDir = process.cwd() // root/packages/toolkit
 const rootDir = path.join(projectDir, '../..') // root/
 const iconsDir = path.join(projectDir, 'resources', 'icons')
 const fontsDir = path.join(projectDir, 'resources', 'fonts')
+const woffDir = path.join(fontsDir, `${fontId}.woff`)
 const stylesheetsDir = path.join(projectDir, 'resources', 'css')
 const iconSources = [
     // Paths relative to packages/toolkit
@@ -19,7 +20,6 @@ const iconSources = [
     `../../node_modules/@vscode/codicons/src/icons/**/*.svg`,
     '!**/{cloud9,dark,light}/**',
 ]
-const packageJson = JSON.parse(fs.readFileSync(path.join(projectDir, 'package.json'), { encoding: 'utf-8' }))
 
 interface PackageIcon {
     readonly description: string
@@ -49,7 +49,12 @@ function createPackageIcon(fontPath: string, unicode: string, description?: stri
     }
 }
 
-async function updatePackage(fontPath: string, icons: [id: string, icon: PackageIcon][]): Promise<void> {
+async function updatePackage(
+    jsonPath: string,
+    fontPath: string,
+    icons: [id: string, icon: PackageIcon][]
+): Promise<void> {
+    const packageJson = JSON.parse(fs.readFileSync(jsonPath, { encoding: 'utf-8' }))
     const contributes = packageJson.contributes as { icons?: IconsContribution }
     const iconsContribution = (contributes.icons ??= {})
 
@@ -94,12 +99,10 @@ async function generateCloud9Icons(targets: { name: string; path: string }[], de
     }
 }
 
-async function generate(mappings: Record<string, number | undefined> = {}) {
-    const dest = path.join(fontsDir, `${fontId}.woff`)
-    const relativeDest = path.relative(projectDir, dest)
-    const icons: { name: string; path: string; data?: PackageIcon }[] = []
-    const generated = new GeneratedFilesManifest()
+type Icons = { name: string; path: string; data?: PackageIcon }[]
 
+async function getIcons(relativeDest: string, mappings: Record<string, number | undefined> = {}) {
+    const icons: Icons = []
     const result = await webfont({
         files: iconSources,
         fontName: fontId,
@@ -154,6 +157,12 @@ async function generate(mappings: Record<string, number | undefined> = {}) {
         },
     })
 
+    return { icons, result }
+}
+
+async function generate(icons: Icons, result: Awaited<ReturnType<typeof webfont>>) {
+    const generated = new GeneratedFilesManifest()
+
     const template = `
 /* 
  * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved. 
@@ -167,18 +176,14 @@ ${result.template}
 
     const stylesheetPath = path.join(stylesheetsDir, 'icons.css')
     const cloud9Dest = path.join(iconsDir, 'cloud9', 'generated')
-    const isValidIcon = (i: (typeof icons)[number]): i is Required<typeof i> => i.data !== undefined
 
     await fs.mkdirp(fontsDir)
-    await fs.writeFile(dest, result.woff)
+    await fs.writeFile(woffDir, result.woff)
     await fs.writeFile(stylesheetPath, template)
-    await updatePackage(
-        `./${relativeDest}`,
-        icons.filter(isValidIcon).map(i => [i.name, i.data])
-    )
+
     await generateCloud9Icons(icons, cloud9Dest)
 
-    generated.addEntry(dest)
+    generated.addEntry(woffDir)
     generated.addEntry(stylesheetPath)
     generated.addEntry(cloud9Dest)
 
@@ -218,8 +223,23 @@ async function loadCodiconMappings(): Promise<Record<string, number | undefined>
 }
 
 async function main() {
+    const args = process.argv.slice(2)
+    const relativeDest = path.relative(projectDir, woffDir)
     const mappings = await loadCodiconMappings()
-    await generate(mappings)
+    const { icons, result } = await getIcons(relativeDest, mappings)
+
+    if (args.includes('--packageJson')) {
+        // Update package.json contributions only
+        const isValidIcon = (i: (typeof icons)[number]): i is Required<typeof i> => i.data !== undefined
+        await updatePackage(
+            path.join(projectDir, 'package.json'),
+            `./${relativeDest}`,
+            icons.filter(isValidIcon).map(i => [i.name, i.data])
+        )
+    } else {
+        // Update resources/ only
+        await generate(icons, result)
+    }
 }
 
 void main()

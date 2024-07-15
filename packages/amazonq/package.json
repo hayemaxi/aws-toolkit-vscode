@@ -65,7 +65,7 @@
         "serve": "webpack serve --config-name mainServe --mode development",
         "newChange": "ts-node ../../scripts/newChange.ts",
         "createRelease": "ts-node ../../scripts/createRelease.ts",
-        "generatePackage": "ts-node ../../scripts/generateIcons.ts"
+        "generatePackage": "ts-node ../../scripts/generateIcons.ts --packageJson"
     },
     "dependencies": {
         "aws-core-vscode": "file:../core/"

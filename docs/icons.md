@@ -2,12 +2,12 @@
 
 All icons that are used in the Toolkit can be found in `resources/icons`.
 
-A [build script](../../scripts/build/generateIcons.ts) generates Toolkit artifacts:
+A [build script](../scripts/generateIcons.ts) generates extension artifacts in [core/](../packages/core/):
 
 -   `resources/icons/cloud9/generated`
 -   `resources/fonts/aws-toolkit-icons.woff`
 -   `resources/css/icons.css`
--   `contributes.icons` in [package.json](../../package.json)
+-   `contributes.icons` in [amazonq package.json](../packages/amazonq/package.json) and [toolkit package.json](../packages/toolkit/package.json)
 
 This script should be ran using `npm run generatePackage` after making updates. Any changes made to `package.json` should be committed with the relevant icons.
 
