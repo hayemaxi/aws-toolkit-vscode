@@ -15,7 +15,7 @@ import { addCodiconToString } from './textUtilities'
 import { getIcon, codicon } from '../icons'
 import globals from '../extensionGlobals'
 import { openUrl } from './vsCodeUtils'
-import { PromptSettings } from '../../shared/settings'
+import { AmazonQPromptSettings, ToolkitPromptSettings } from '../../shared/settings'
 import { telemetry } from '../telemetry/telemetry'
 import { vscodeComponent } from '../vscode/commands2'
 
@@ -160,8 +160,8 @@ export async function showReauthenticateMessage({
 }: {
     message: string
     connect: string
-    suppressId: string // Parameters<PromptSettings['isPromptEnabled']>[0]
-    settings: PromptSettings
+    suppressId: string // Parameters<ToolkitPromptSettings['isPromptEnabled']>[0]
+    settings: ToolkitPromptSettings | AmazonQPromptSettings
     reauthFunc: () => Promise<void>
     source?: string
 }) {

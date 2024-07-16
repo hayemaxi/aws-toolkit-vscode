@@ -27,7 +27,7 @@ import {
 import { createBuilderIdConnection } from '../auth/utils'
 import { builderIdStartUrl } from '../auth/sso/model'
 import { showReauthenticateMessage } from '../shared/utilities/messages'
-import { PromptSettings } from '../shared/settings'
+import { ToolkitPromptSettings } from '../shared/settings'
 
 // Secrets stored on the macOS keychain appear as individual entries for each key
 // This is fine so long as the user has only a few accounts. Otherwise this should
@@ -176,7 +176,7 @@ export class CodeCatalystAuthenticationProvider {
             message: localizedText.connectionExpired('CodeCatalyst'),
             connect: localizedText.connect,
             suppressId: 'codeCatalystConnectionExpired',
-            settings: PromptSettings.instance,
+            settings: ToolkitPromptSettings.instance,
             reauthFunc: async () => {
                 await this.reauthenticate(conn)
             },

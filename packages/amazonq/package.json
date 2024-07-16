@@ -46,7 +46,7 @@
     "browser": "./dist/src/extensionWeb",
     "scripts": {
         "vscode:prepublish": "npm run clean && npm run buildScripts && webpack --mode production",
-        "buildScripts": "npm run generateNonCodeFiles && npm run copyFiles && npm run generatePackage && tsc -p ./ --noEmit",
+        "buildScripts": "npm run generateNonCodeFiles && npm run copyFiles && npm run generatePackage && npm run generateSettings && tsc -p ./ --noEmit",
         "generateNonCodeFiles": "ts-node ../../scripts/generateNonCodeFiles.ts",
         "copyFiles": "ts-node ./scripts/build/copyFiles.ts",
         "clean": "ts-node ../../scripts/clean.ts dist/ LICENSE NOTICE",
@@ -65,7 +65,8 @@
         "serve": "webpack serve --config-name mainServe --mode development",
         "newChange": "ts-node ../../scripts/newChange.ts",
         "createRelease": "ts-node ../../scripts/createRelease.ts",
-        "generatePackage": "ts-node ../../scripts/generateIcons.ts --packageJson"
+        "generatePackage": "ts-node ../../scripts/generateIcons.ts --packageJson",
+        "generateSettings": "ts-node ../../scripts/generateSettings.ts"
     },
     "dependencies": {
         "aws-core-vscode": "file:../core/"

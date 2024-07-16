@@ -57,7 +57,7 @@
     },
     "scripts": {
         "vscode:prepublish": "npm run clean && npm run buildScripts && webpack --mode production",
-        "buildScripts": "npm run generateNonCodeFiles && npm run copyFiles && npm run generatePackage && tsc -p ./ --noEmit",
+        "buildScripts": "npm run generateNonCodeFiles && npm run copyFiles && npm run generatePackage && npm run generateSettings && tsc -p ./ --noEmit",
         "generateConfigurationAttributes": "ts-node ./scripts/build/generateConfigurationAttributes.ts",
         "generateNonCodeFiles": "ts-node ../../scripts/generateNonCodeFiles.ts",
         "copyFiles": "ts-node ./scripts/build/copyFiles.ts",
@@ -74,7 +74,8 @@
         "createRelease": "ts-node ../../scripts/createRelease.ts",
         "newChange": "ts-node ../../scripts/newChange.ts",
         "watch": "npm run clean && npm run buildScripts && tsc -watch -p ./",
-        "generatePackage": "ts-node ../../scripts/generateIcons.ts --packageJson"
+        "generatePackage": "ts-node ../../scripts/generateIcons.ts --packageJson",
+        "generateSettings": "ts-node ../../scripts/generateSettings.ts"
     },
     "contributes": {
         "configuration": {

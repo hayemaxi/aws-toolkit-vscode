@@ -15,7 +15,8 @@ import { once, onceChanged } from './utilities/functionUtils'
 import { ToolkitError } from './errors'
 import { telemetry } from './telemetry/telemetry'
 import globals from './extensionGlobals'
-import { isAmazonQ } from './amazonQ'
+import toolkitSettings from './settings-toolkit.gen'
+import amazonQSettings from './settings-amazonq.gen'
 
 type Workspace = Pick<typeof vscode.workspace, 'getConfiguration' | 'onDidChangeConfiguration'>
 
@@ -473,51 +474,14 @@ export interface ResetableMemento extends vscode.Memento {
     reset(): Promise<void>
 }
 
-/**
- * All VSCode settings known to each extension. This allows us to have compile-time checking of
- * most settings abstractions without having a local package.json containing all of the settings.
- *
- * TODO: Ideally this would live in each extension and not the core library. However, named settings
- * access is deeply ingrained into the structure of the core lib.
- * Generate this instead?
- */
-type AllSettings =
-    | 'aws.profile'
-    | 'aws.ecs.openTerminalCommand'
-    | 'aws.iot.maxItemsPerPage'
-    | 'aws.s3.maxItemsPerPage'
-    | 'aws.samcli.location'
-    | 'aws.samcli.lambdaTimeout'
-    | 'aws.samcli.legacyDeploy'
-    | 'aws.telemetry'
-    | 'aws.stepfunctions.asl.format.enable'
-    | 'aws.stepfunctions.asl.maxItemsComputed'
-    | 'aws.ssmDocument.ssm.maxItemsComputed'
-    | 'aws.cwl.limit'
-    | 'aws.samcli.manuallySelectedBuckets'
-    | 'aws.samcli.enableCodeLenses'
-    | 'aws.suppressPrompts'
-    | 'aws.experiments'
-    | 'aws.resources.enabledResources'
-    | 'aws.lambda.recentlyUploaded'
-    | 'aws.accessAnalyzer.policyChecks.checkNoNewAccessFilePath'
-    | 'aws.accessAnalyzer.policyChecks.checkAccessNotGrantedFilePath'
-    | 'aws.accessAnalyzer.policyChecks.cloudFormationParameterFilePath'
-    | 'amazonQ.telemetry'
-    | 'amazonQ.suppressPrompts'
-    | 'amazonQ.showInlineCodeSuggestionsWithCodeReferences'
-    | 'amazonQ.importRecommendationForInlineCodeSuggestions'
-    | 'amazonQ.shareContentWithAWS'
+// The below types are used to split-out 'sections' from `package.json`
+// Obviously not ideal, but the alternative is to generate the properties
+// from implementations. Using types requires basically no logic but lacks
+// precision. We still need to manually specify what type something should be,
+// at least for anything beyond primitive types.
+const settingsProps = { ...toolkitSettings, ...amazonQSettings }
 
-// Current extension configuration
-let _settingsProps: any
-function settingsProps() {
-    if (!_settingsProps) {
-        _settingsProps = globals.context.extension.packageJSON.contributes.configuration.properties
-    }
-
-    return _settingsProps
-}
+type SettingsProps = typeof settingsProps
 
 type Split<T, S extends string> = T extends `${infer L}${S}${infer R}` ? [L, ...Split<R, S>] : [T]
 type Pop<T> = T extends [...infer R, infer _] ? R : never
@@ -529,7 +493,8 @@ type FromParts<T, K> = K extends [infer U, ...infer R]
         : T
     : T
 
-type Format<T extends string> = { [P in T]: FromParts<TypeConstructor, Split<P, '.'>> }[T]
+type Format<T> = { [P in keyof T]: FromParts<TypeConstructor, Split<P, '.'>> }[keyof T]
+type Config = Intersection<Format<SettingsProps>>
 
 type Join<T extends string[], S extends string> = T['length'] extends 1
     ? T[0]
@@ -549,9 +514,7 @@ type Select<T, K> = K extends [infer L, ...infer R]
         : never
     : never
 
-type Sections = {
-    [P in AllSettings as Join<Pop<Split<P, '.'>>, '.'>]: Select<Intersection<Format<AllSettings>>, Pop<Split<P, '.'>>>
-}
+type Sections = { [P in keyof SettingsProps as Join<Pop<Split<P, '.'>>, '.'>]: Select<Config, Pop<Split<P, '.'>>> }
 
 /**
  * Creates a class for manipulating specific sections of settings specified in `package.json`.
@@ -609,7 +572,7 @@ export function fromExtensionManifest<T extends TypeDescriptor & Partial<Section
     // As long as the above holds true, throwing an error here will always be caught by CI
 
     const resolved = keys(descriptor).map(k => `${section}.${k}`)
-    const missing = resolved.filter(k => (settingsProps() as Record<string, any>)[k] === undefined)
+    const missing = resolved.filter(k => (settingsProps as Record<string, any>)[k] === undefined)
 
     if (missing.length > 0) {
         const message = `The following configuration keys were missing from package.json: ${missing.join(', ')}`
@@ -621,7 +584,6 @@ export function fromExtensionManifest<T extends TypeDescriptor & Partial<Section
     return Settings.define(section, descriptor)
 }
 
-let _promptSettings: ReturnType<typeof initPromptSettings> | undefined
 /**
  * PromptSettings
  *
@@ -642,54 +604,75 @@ let _promptSettings: ReturnType<typeof initPromptSettings> | undefined
  * ```
  *
  * There are individual implementations for the Toolkit extension and Amazon Q extension.
- * This is a tempoxrary workaround to get compile time checking and runtime fetching
+ * This is a temporary workaround to get compile time checking and runtime fetching
  * of settings working.
  *
  * TODO: Settings should be defined in individual extensions, and passed to the
  * core lib as necessary.
  */
-export function promptSettings() {
-    return (_promptSettings ??= initPromptSettings())
-}
+export const toolkitPrompts = settingsProps['aws.suppressPrompts']
+type toolkitPromptName = keyof typeof toolkitPrompts
+export class ToolkitPromptSettings extends Settings.define(
+    'aws.suppressPrompts',
+    toRecord(keys(toolkitPrompts), () => Boolean)
+) {
+    public async isPromptEnabled(promptName: toolkitPromptName): Promise<boolean> {
+        try {
+            return !this._getOrThrow(promptName, false)
+        } catch (e) {
+            this._log('prompt check for "%s" failed: %s', promptName, (e as Error).message)
+            await this.reset()
 
-export function initPromptSettings(settings?: ClassToInterfaceType<Settings>) {
-    const promptSection = isAmazonQ() ? 'amazonQ.suppressPrompts' : 'aws.suppressPrompts'
-    const prompts = settingsProps()[promptSection].properties
-
-    class PromptSettings extends Settings.define(
-        promptSection,
-        toRecord(keys(prompts), () => Boolean)
-    ) {
-        public async isPromptEnabled(promptName: string): Promise<boolean> {
-            // Runtime check
-            // TODO: Compile-time check
-            if (!(promptName in prompts)) {
-                throw new Error(`Invalid prompt setting: '${promptName}' for section '${promptSection}'`)
-            }
-
-            try {
-                return !this._getOrThrow(promptName, false)
-            } catch (e) {
-                this._log('prompt check for "%s" failed: %s', promptName, (e as Error).message)
-                await this.reset()
-
-                return true
-            }
-        }
-
-        public async disablePrompt(promptName: string): Promise<void> {
-            if (await this.isPromptEnabled(promptName)) {
-                await this.update(promptName, true)
-            }
+            return true
         }
     }
 
-    const ret = settings ? new PromptSettings(settings) : new PromptSettings()
-    _promptSettings = ret
-    return ret
+    public async disablePrompt(promptName: toolkitPromptName): Promise<void> {
+        if (await this.isPromptEnabled(promptName)) {
+            await this.update(promptName, true)
+        }
+    }
+
+    static #instance: ToolkitPromptSettings
+
+    public static get instance() {
+        return (this.#instance ??= new this())
+    }
 }
 
-let _experiments: ReturnType<typeof initExperiments> | undefined
+export const amazonQPrompts = settingsProps['amazonQ.suppressPrompts']
+type amazonQPromptName = keyof typeof amazonQPrompts
+export class AmazonQPromptSettings extends Settings.define(
+    'amazonQ.suppressPrompts',
+    toRecord(keys(amazonQPrompts), () => Boolean)
+) {
+    public async isPromptEnabled(promptName: amazonQPromptName): Promise<boolean> {
+        try {
+            return !this._getOrThrow(promptName, false)
+        } catch (e) {
+            this._log('prompt check for "%s" failed: %s', promptName, (e as Error).message)
+            await this.reset()
+
+            return true
+        }
+    }
+
+    public async disablePrompt(promptName: amazonQPromptName): Promise<void> {
+        if (await this.isPromptEnabled(promptName)) {
+            await this.update(promptName, true)
+        }
+    }
+
+    static #instance: AmazonQPromptSettings
+
+    public static get instance() {
+        return (this.#instance ??= new this())
+    }
+}
+
+const experiments = settingsProps['aws.experiments']
+type ExperimentName = keyof typeof experiments
+
 /**
  * "Experiments" are for features that users must opt-in to use. Experimental implementations
  * should use this class to gate relevant functionality. Certain features, like adding a new
@@ -713,37 +696,26 @@ let _experiments: ReturnType<typeof initExperiments> | undefined
  * })
  * ```
  */
-export function experiments() {
-    return (_experiments ??= initExperiments())
-}
-export function initExperiments(settings?: ClassToInterfaceType<Settings>) {
-    const experimentSection = 'aws.experiments'
-    const experiments = settingsProps()[experimentSection].properties
-    class Experiments extends Settings.define(
-        experimentSection,
-        toRecord(keys(experiments), () => Boolean)
-    ) {
-        public async isExperimentEnabled(name: string): Promise<boolean> {
-            // Runtime check
-            // TODO: Compile-time check
-            if (!(name in experiments)) {
-                throw new Error(`Invalid exeriments setting: '${name}' for section '${experimentSection}'`)
-            }
+export class Experiments extends Settings.define(
+    'aws.experiments',
+    toRecord(keys(experiments), () => Boolean)
+) {
+    public async isExperimentEnabled(name: ExperimentName): Promise<boolean> {
+        try {
+            return this._getOrThrow(name, false)
+        } catch (error) {
+            this._log(`experiment check for ${name} failed: %s`, error)
+            await this.reset()
 
-            try {
-                return this._getOrThrow(name, false)
-            } catch (error) {
-                this._log(`experiment check for ${name} failed: %s`, error)
-                await this.reset()
-
-                return false
-            }
+            return false
         }
     }
 
-    const ret = settings ? new Experiments(settings) : new Experiments()
-    _experiments = ret
-    return ret
+    static #instance: Experiments
+
+    public static get instance() {
+        return (this.#instance ??= new this())
+    }
 }
 
 const devSettings = {
@@ -897,13 +869,8 @@ export class DevSettings extends Settings.define('aws.dev', devSettings) {
  */
 export async function migrateSetting<T, U = T>(
     from: { key: string; type: TypeConstructor<T> },
-    to: { key: `${keyof Sections}.${string}`; transform?: (value: T) => U }
+    to: { key: keyof SettingsProps; transform?: (value: T) => U }
 ) {
-    // Runtime check
-    // TODO: Compile-time check (if possible)
-    if (!(to.key in settingsProps())) {
-        throw new Error(`Cannot migrate setting, new key not found: ${to.key}`)
-    }
     const config = vscode.workspace.getConfiguration()
 
     const migrateForScope = async (scope: vscode.ConfigurationTarget) => {
@@ -950,6 +917,6 @@ export async function openSettings(prefix: string): Promise<void> {
  *
  * This only works for keys that are considered "top-level", e.g. keys of {@link settingsProps}.
  */
-export async function openSettingsId(key: AllSettings): Promise<void> {
+export async function openSettingsId<K extends keyof SettingsProps>(key: K): Promise<void> {
     await vscode.commands.executeCommand('workbench.action.openSettings', `@id:${key}`)
 }

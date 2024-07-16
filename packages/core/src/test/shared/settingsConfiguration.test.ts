@@ -10,7 +10,7 @@ import {
     DevSettings,
     Experiments,
     fromExtensionManifest,
-    PromptSettings,
+    ToolkitPromptSettings,
     Settings,
     testSetting,
 } from '../../shared/settings'
@@ -429,11 +429,11 @@ describe('PromptSetting', function () {
     const target = vscode.ConfigurationTarget.Workspace
 
     let settings: Settings
-    let sut: PromptSettings
+    let sut: ToolkitPromptSettings
 
     beforeEach(async function () {
         settings = new Settings(target)
-        sut = new PromptSettings(settings)
+        sut = new ToolkitPromptSettings(settings)
         await sut.reset()
     })
 
@@ -518,7 +518,7 @@ describe('Experiments', function () {
         await sut.reset()
     })
 
-    // The `Experiments` class is basically an immutable form of `PromptSettings`
+    // The `Experiments` class is basically an immutable form of `ToolkitPromptSettings`
 
     it('returns false when the setting is missing', async function () {
         assert.strictEqual(await sut.isExperimentEnabled('jsonResourceModification'), false)
