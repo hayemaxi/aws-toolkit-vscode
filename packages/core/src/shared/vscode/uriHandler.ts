@@ -10,7 +10,7 @@ import * as nls from 'vscode-nls'
 import { showViewLogsMessage } from '../utilities/messages'
 import { URL, URLSearchParams } from 'whatwg-url'
 import { VSCODE_EXTENSION_ID } from '../extensions'
-import { isAmazonQ } from '../extensionUtilities'
+import { isAmazonQ } from '../amazonQ'
 
 const localize = nls.loadMessageBundle()
 

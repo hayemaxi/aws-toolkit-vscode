@@ -15,7 +15,7 @@ import { ToolkitError } from '../errors'
 import crypto from 'crypto'
 import { keysAsInt } from '../utilities/tsUtils'
 import { partialClone } from '../utilities/collectionUtils'
-import { isAmazonQ } from '../extensionUtilities'
+import { isAmazonQ } from '../amazonQ'
 
 type Callback = (...args: any[]) => any
 type CommandFactory<T extends Callback, U extends any[]> = (...parameters: U) => T

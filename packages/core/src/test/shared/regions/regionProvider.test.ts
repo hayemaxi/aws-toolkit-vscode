@@ -10,7 +10,7 @@ import { FakeMemento } from '../../fakeExtensionContext'
 import { createQuickPickPrompterTester } from '../ui/testUtils'
 import { createSsoProfile, createTestAuth } from '../../credentials/testUtil'
 import { Auth } from '../../../auth/auth'
-import * as extUtils from '../../../shared/extensionUtilities'
+import * as q from '../../../shared/amazonQ'
 import sinon from 'sinon'
 
 const regionCode = 'someRegion'
@@ -212,7 +212,7 @@ describe('RegionProvider', async function () {
 
         it('returns undefined when no active amazon Q connection', function () {
             const regionProvider = new RegionProvider(endpoints, new FakeMemento())
-            sinon.stub(extUtils, 'isAmazonQ').returns(true)
+            sinon.stub(q, 'isAmazonQ').returns(true)
 
             assert.strictEqual(regionProvider.guessDefaultRegion(), undefined)
         })
@@ -224,7 +224,7 @@ describe('RegionProvider', async function () {
             await auth.useConnection(await auth.createConnection(createSsoProfile({ ssoRegion: region })))
 
             sinon.stub(Auth, 'instance').value(auth)
-            sinon.stub(extUtils, 'isAmazonQ').returns(true)
+            sinon.stub(q, 'isAmazonQ').returns(true)
 
             assert.strictEqual(regionProvider.guessDefaultRegion(), region)
         })

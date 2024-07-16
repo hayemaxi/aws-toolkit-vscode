@@ -13,8 +13,7 @@ import { Ec2MetadataClient } from './clients/ec2MetadataClient'
 import { DefaultEc2MetadataClient } from './clients/ec2MetadataClient'
 import { extensionVersion, getCodeCatalystDevEnvId } from './vscode/env'
 import { DevSettings } from './settings'
-import globals from './extensionGlobals'
-import { once } from './utilities/functionUtils'
+import { isAmazonQ } from './amazonQ'
 
 const localize = nls.loadMessageBundle()
 
@@ -23,19 +22,6 @@ const cloud9Appname = 'AWS Cloud9'
 const cloud9CnAppname = 'Amazon Cloud9'
 const sageMakerAppname = 'SageMaker Code Editor'
 const notInitialized = 'notInitialized'
-
-function _isAmazonQ() {
-    const id = globals.context.extension.id
-    const isToolkit = id === VSCODE_EXTENSION_ID.awstoolkit || id === VSCODE_EXTENSION_ID.awstoolkitcore
-    const isQ = id === VSCODE_EXTENSION_ID.amazonq
-    if (!isToolkit && !isQ) {
-        throw Error(`unexpected extension id: ${id}`) // sanity check
-    }
-    return isQ
-}
-
-/** True if the current extension is "Amazon Q", else the current extension is "AWS Toolkit". */
-export const isAmazonQ = once(_isAmazonQ)
 
 export function productName() {
     return isAmazonQ() ? 'Amazon Q' : `${getIdeProperties().company} Toolkit`
