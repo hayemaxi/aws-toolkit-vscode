@@ -59,10 +59,9 @@ import {
     AwsConnection,
     scopesCodeWhispererCore,
 } from './connection'
-import { isSageMaker, isCloud9 } from '../shared/extensionUtilities'
+import { isSageMaker, isCloud9, isAmazonQ } from '../shared/extensionUtilities'
 import { telemetry } from '../shared/telemetry/telemetry'
 import { randomUUID } from '../common/crypto'
-import { isAmazonQ } from '../shared/extensions'
 
 interface AuthService {
     /**
