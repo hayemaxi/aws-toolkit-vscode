@@ -518,7 +518,7 @@ describe('Experiments', function () {
         await sut.reset()
     })
 
-    // The `Experiments` class is basically an immutable form of `ToolkitPromptSettings`
+    // The `Experiments` class is basically an immutable form of `PromptSettings`
 
     it('returns false when the setting is missing', async function () {
         assert.strictEqual(await sut.isExperimentEnabled('jsonResourceModification'), false)
