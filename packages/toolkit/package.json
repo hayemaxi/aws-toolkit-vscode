@@ -55,7 +55,7 @@
     "contributes": "This field will be autopopulated from the core module during debugging and packaging.",
     "scripts": {
         "vscode:prepublish": "npm run clean && npm run buildScripts && webpack --mode production",
-        "buildScripts": "npm run generateNonCodeFiles && npm run copyFiles && tsc -p ./ --noEmit",
+        "buildScripts": "npm run generateNonCodeFiles && npm run copyFiles && npm run generateSettings && tsc -p ./ --noEmit",
         "generateNonCodeFiles": "ts-node ../../scripts/generateNonCodeFiles.ts",
         "copyFiles": "ts-node ./scripts/build/copyFiles.ts",
         "clean": "ts-node ../../scripts/clean.ts dist/ LICENSE NOTICE quickStart*",
@@ -70,7 +70,8 @@
         "newChange": "ts-node ../../scripts/newChange.ts",
         "watch": "npm run clean && npm run buildScripts && tsc -watch -p ./",
         "copyPackageJson": "ts-node ./scripts/build/handlePackageJson",
-        "restorePackageJson": "ts-node ./scripts/build/handlePackageJson --restore"
+        "restorePackageJson": "ts-node ./scripts/build/handlePackageJson --restore",
+        "generateSettings": "ts-node ../../scripts/generateSettings.ts"
     },
     "devDependencies": {},
     "dependencies": {
