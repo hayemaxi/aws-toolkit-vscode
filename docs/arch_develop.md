@@ -57,20 +57,10 @@ Additional quirks introduced by creating a core library from the original extens
 -   Tests are ran from `packages/core/`
 -   Extension runs from `packages/toolkit`
 -   Extension tests run from the core lib. Since some of the tests require an extension context/sandbox, we initiate a "fake" extension to run these tests. This is also why there are vscode extension properties in the package.json
--   Some of original extension code (that now lives in `packages/core`) depends on the package.json, specifically the contributes section. This section is very large AND needs to be present in both the core library and toolkit extension package.jsons. The core library code needs access to this section to create types, set up SAM debuggers, etc. The toolkit needs this section during packaging/debugging so that the extension can run in vscode. The short term solution was to creat a [build script](../packages/toolkit/scripts/build/handlePackageJson.ts) to copy necessary fields over to the toolkit extension during packaging and debugging.
 
 ### Contributes and Settings
 
-Some components of the core library depend on the `package.json`s of the extensions. One example of this is compile time checking of the extension's settings values. However, VSCode also requires a complete local `package.json` for the individual extensions during packaging. As a temporary workaround to this, we are using scripts to auto-populate the `package.json`s for the individual extensions from the core `package.json`.
-
--   [`packages/toolkit/../handlePackageJson.ts`](../packages/toolkit/scripts/build/handlePackageJson.ts)
-    -   Copies the entirety of the `contributes` and `engine` sections, except for `configuration.properties` relating to `packages/amazon`.
-    -   Restores to the original barebones `package.json` after packaging/debugging, to avoid a large amount of duplicate code.
-    -   To develop for the Toolkit extension: add all changes to `packages/core/package.json`
--   [`packages/amazonq/../syncPackageJson.ts`](../packages/amazonq/scripts/build/syncPackageJson.ts)
-    -   Moves all Amazon Q related `configuration.properties` to the local `package.json` only, overwriting anything that exists with the same name locally.
-    -   Does not restore, it is a superset of what exists in `packages/core` for `configuration.properties`.
-    -   To develop for the Amazon Q extension: add all changes to `packages/amazonq/package.json`, EXCEPT for settings that are references by code in the core library, or settings that already exist in the core `package.json`
+If you are modifying or registering new debuggers in VS Code via the `debuggers` contribution point, you may need to regenerate the [definitions file](../packages/core/src/shared/sam/debugger/awsSamDebugConfiguration.gen.ts). After updating ['toolkit/package.json'](../packages/toolkit/package.json), run `npm run generateConfigurationAttributes -w packages/toolkit`
 
 ## Shared vs Common names
 
@@ -293,8 +283,8 @@ Commands and events are defined on the backend via sub-classes of `VueWebview`. 
     ```ts
     client
         .foo()
-        .then(response => console.log(response))
-        .catch(err => console.log(err))
+        .then((response) => console.log(response))
+        .catch((err) => console.log(err))
     ```
 
     The backend protocol is allowed to throw errors. These result in rejected Promises on the frontend.
@@ -302,13 +292,13 @@ Commands and events are defined on the backend via sub-classes of `VueWebview`. 
 -   Registering for events:
 
     ```ts
-    client.onBar(num => console.log(num))
+    client.onBar((num) => console.log(num))
     ```
 
 -   Methods called `init` will only return data on the initial webview load:
 
     ```ts
-    client.init(data => (this.data = data ?? this.data))
+    client.init((data) => (this.data = data ?? this.data))
     ```
 
 ## Webviews (non Vue)
@@ -494,8 +484,8 @@ class ExampleWizard extends Wizard<ExampleState> {
             { label: '1', data: 1 },
             { label: '2', data: 2 },
         ]
-        this.form.bar.bindPrompter(state => createQuickPick(items, { title: `Select a number (${state.foo})` }), {
-            showWhen: state => state.foo?.length > 5,
+        this.form.bar.bindPrompter((state) => createQuickPick(items, { title: `Select a number (${state.foo})` }), {
+            showWhen: (state) => state.foo?.length > 5,
         })
     }
 }
