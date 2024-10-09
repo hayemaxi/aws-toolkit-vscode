@@ -20,6 +20,7 @@ import {
 import { makeEndpointsProvider, registerGenericCommands } from 'aws-core-vscode'
 import { CommonAuthWebview } from 'aws-core-vscode/login'
 import {
+    AnnouncementsNode,
     DefaultAWSClientBuilder,
     DefaultAwsContext,
     ExtContext,
@@ -38,6 +39,8 @@ import {
     isNetworkError,
     messages,
     placeholder,
+    refreshAnnouncements,
+    refreshAnnouncementsRootNode,
     setContext,
     setupUninstallHandler,
 } from 'aws-core-vscode/shared'
@@ -48,6 +51,7 @@ import * as semver from 'semver'
 import * as vscode from 'vscode'
 import { registerCommands } from './commands'
 import { focusAmazonQPanel } from 'aws-core-vscode/codewhispererChat'
+import { registerToolView } from 'aws-core-vscode/awsexplorer'
 
 export const amazonQContextPrefix = 'amazonq'
 
@@ -146,6 +150,15 @@ export async function activateAmazonQCommon(context: vscode.ExtensionContext, is
             void focusAmazonQPanel.execute(placeholder, 'firstStartUp')
         }, 1000)
     }
+
+    registerToolView(
+        {
+            nodes: [AnnouncementsNode.instance],
+            view: 'aws.amazonq.announcements',
+            refreshCommands: [refreshAnnouncements, refreshAnnouncementsRootNode],
+        },
+        context
+    )
 
     await telemetry.auth_userState
         .run(async () => {

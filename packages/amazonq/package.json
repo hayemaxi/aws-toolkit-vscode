@@ -185,6 +185,11 @@
         "views": {
             "amazonq": [
                 {
+                    "id": "aws.amazonq.announcements",
+                    "name": "%AWS.announcements.title%",
+                    "when": "!isCloud9 && !aws.isSageMaker && aws.amazonq.showAnnouncements"
+                },
+                {
                     "type": "webview",
                     "id": "aws.amazonq.AmazonCommonAuth",
                     "name": "%AWS.amazonq.login%",
@@ -224,6 +229,11 @@
             ]
         },
         "viewsWelcome": [
+            {
+                "view": "aws.amazonq.announcements",
+                "contents": "Urgent announcement:\n[Go Goated](stuff)",
+                "when": "!isCloud9 && !aws.isSageMaker && aws.amazonq.showAnnouncements"
+            },
             {
                 "view": "aws.amazonq.transformationProposedChangesTree",
                 "contents": "Project transformation is complete.\n[Download Proposed Changes](command:aws.amazonq.transformationHub.reviewChanges.startReview)",
@@ -366,6 +376,13 @@
                     "group": "cw_chat"
                 }
             ],
+            "view/item/context": [
+                {
+                    "command": "aws.amazonq.dismissNotification",
+                    "when": "viewItem == awsAmazonQWhatsNew",
+                    "group": "inline@1"
+                }
+            ],
             "aws.amazonq.submenu.feedback": [
                 {
                     "command": "aws.amazonq.submitFeedback",
@@ -394,10 +411,27 @@
         },
         "commands": [
             {
+                "command": "aws.amazonq.dismissNotification",
+                "title": "Dismiss",
+                "category": "%AWS.title%",
+                "enablement": "isCloud9 || !aws.isWebExtHost",
+                "icon": "$(remove-close)"
+            },
+            {
                 "command": "aws.amazonq.explainCode",
                 "title": "%AWS.command.amazonq.explainCode%",
                 "category": "%AWS.amazonq.title%",
                 "enablement": "aws.codewhisperer.connected"
+            },
+            {
+                "command": "aws.amazonq.sendEmergency",
+                "title": "DEBUG: Send Emergency Notification",
+                "category": "%AWS.amazonq.title%"
+            },
+            {
+                "command": "aws.amazonq.sendWhatsNew",
+                "title": "DEBUG: Send Whats New Notification",
+                "category": "%AWS.amazonq.title%"
             },
             {
                 "command": "aws.amazonq.security.scan",

@@ -37,6 +37,7 @@ export {
     CodewhispererSecurityScan,
 } from './telemetry/telemetry.gen'
 export { randomUUID } from './crypto'
+export { AnnouncementsNode, refreshAnnouncements, refreshAnnouncementsRootNode } from './treeview/announcements'
 export * from './environmentVariables'
 export * from './vscode/setContext'
 export * from './utilities/textUtilities'

@@ -105,8 +105,15 @@ export async function activate(args: {
         })
     )
 
+    const announcementsNode: ToolView[] = []
     const amazonQViewNode: ToolView[] = []
     if (!isCloud9()) {
+        // announcementsNode.push({
+        //     nodes: [AnnouncementsNode.instance],
+        //     view: 'aws.toolkit.announcements',
+        //     refreshCommands: [refreshAnnouncements, refreshAnnouncementsRootNode],
+        // })
+
         if (
             isExtensionInstalled(VSCODE_EXTENSION_ID.amazonq) ||
             globals.globalState.get<boolean>('aws.toolkit.amazonq.dismissed')
@@ -122,6 +129,7 @@ export async function activate(args: {
         })
     }
     const viewNodes: ToolView[] = [
+        ...announcementsNode,
         ...amazonQViewNode,
         ...codecatalystViewNode,
         { nodes: [CdkRootNode.instance], view: 'aws.cdk', refreshCommands: [CdkRootNode.instance.refreshCdkExplorer] },
