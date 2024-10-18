@@ -38,6 +38,7 @@ export {
     CodewhispererSecurityScan,
 } from './telemetry/telemetry.gen'
 export { randomUUID } from './crypto'
+export { NotificationsNode } from '../notifications/notificationsNode'
 export * from './environmentVariables'
 export * from './vscode/setContext'
 export * from './utilities/textUtilities'

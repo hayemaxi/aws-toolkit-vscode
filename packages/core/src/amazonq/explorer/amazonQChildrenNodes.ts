@@ -7,13 +7,14 @@ import * as vscode from 'vscode'
 import * as nls from 'vscode-nls'
 import { Commands } from '../../shared/vscode/commands2'
 import { getIcon } from '../../shared/icons'
-import { installAmazonQExtension } from '../../codewhisperer/commands/basicCommands'
 import { amazonQHelpUrl } from '../../shared/constants'
 import { cwTreeNodeSource } from '../../codewhisperer/commands/types'
 import { VSCODE_EXTENSION_ID } from '../../shared/extensions'
-import { globals, setContext } from '../../shared'
+import globals from '../../shared/extensionGlobals'
+import { setContext } from '../../shared/vscode/setContext'
 import { ExtStartUpSources, telemetry } from '../../shared/telemetry'
 import { ExtensionUse } from '../../auth/utils'
+import { installAmazonQExtension } from '../../codewhisperer/commands/basicCommands'
 
 const localize = nls.loadMessageBundle()
 

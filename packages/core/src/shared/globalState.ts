@@ -22,7 +22,7 @@ type samInitStateKey =
 
 type stepFunctionsKey = 'SCRIPT_LAST_DOWNLOADED_URL' | 'CSS_LAST_DOWNLOADED_URL'
 
-type globalKey =
+export type globalKey =
     | samInitStateKey
     | stepFunctionsKey
     | ToolIdStateKey
@@ -31,6 +31,10 @@ type globalKey =
     | 'aws.amazonq.codewhisperer.newCustomizations'
     | 'aws.amazonq.hasShownWalkthrough'
     | 'aws.amazonq.showTryChatCodeLens'
+    | 'aws.amazonq.notifications'
+    | 'aws.toolkit.notifications'
+    | '_aws.test.amazonq.notifications' // DELETE ME
+    | '_aws.test.toolkit.notifications' // DELETE ME
     | 'aws.downloadPath'
     | 'aws.lastTouchedS3Folder'
     | 'aws.lastUploadedToS3Folder'

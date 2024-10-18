@@ -18,6 +18,7 @@
         "./shared": "./dist/src/shared/index.js",
         "./sharedNode": "./dist/src/shared/indexNode.js",
         "./auth": "./dist/src/auth/index.js",
+        "./awsexplorer": "./dist/src/awsexplorer/index.js",
         "./amazonqGumby": "./dist/src/amazonqGumby/index.js",
         "./amazonqFeatureDev": "./dist/src/amazonqFeatureDev/index.js",
         "./codewhispererChat": "./dist/src/codewhispererChat/index.js",
@@ -27,7 +28,8 @@
         "./utils": "./dist/src/shared/utilities/index.js",
         "./feedback": "./dist/src/feedback/index.js",
         "./telemetry": "./dist/src/shared/telemetry/index.js",
-        "./dev": "./dist/src/dev/index.js"
+        "./dev": "./dist/src/dev/index.js",
+        "./notifications": "./dist/src/notifications/index.js"
     },
     "contributes": {
         "icons": {
