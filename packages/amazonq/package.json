@@ -378,7 +378,7 @@
             "view/item/context": [
                 {
                     "command": "_aws.amazonq.notifications.dismiss",
-                    "when": "viewItem == amazonqNotificationStartUp",
+                    "when": "viewItem == amazonqNotificationStartUp || viewItem == amazonqNotificationEmergency",
                     "group": "inline@1"
                 }
             ],
@@ -421,6 +421,16 @@
                 "title": "%AWS.command.amazonq.explainCode%",
                 "category": "%AWS.amazonq.title%",
                 "enablement": "aws.codewhisperer.connected"
+            },
+            {
+                "command": "aws.amazonq.sendEmergency",
+                "title": "DEBUG: Send Emergency Notification",
+                "category": "%AWS.amazonq.title%"
+            },
+            {
+                "command": "aws.amazonq.sendWhatsNew",
+                "title": "DEBUG: Send Whats New Notification",
+                "category": "%AWS.amazonq.title%"
             },
             {
                 "command": "aws.amazonq.security.scan",

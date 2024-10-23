@@ -44,14 +44,23 @@ import {
     setContext,
     setupUninstallHandler,
     maybeShowMinVscodeWarning,
+    getOperatingSystem,
 } from 'aws-core-vscode/shared'
-import { ExtStartUpSources, telemetry } from 'aws-core-vscode/telemetry'
+import { AuthUserState, ExtStartUpSources, getComputeEnvType, telemetry } from 'aws-core-vscode/telemetry'
 import { VSCODE_EXTENSION_ID } from 'aws-core-vscode/utils'
 import { join } from 'path'
 import * as semver from 'semver'
 import * as vscode from 'vscode'
 import { registerCommands } from './commands'
 import { focusAmazonQPanel } from 'aws-core-vscode/codewhispererChat'
+import { registerToolView } from 'aws-core-vscode/awsexplorer'
+import {
+    NotificationsController,
+    NotificationsNode,
+    RuleEngine,
+    RuleContext,
+    registerProvider,
+} from 'aws-core-vscode/notifications'
 
 export const amazonQContextPrefix = 'amazonq'
 
@@ -161,52 +170,86 @@ export async function activateAmazonQCommon(context: vscode.ExtensionContext, is
         }, 1000)
     }
 
-    await telemetry.auth_userState
-        .run(async () => {
-            telemetry.record({ passive: true })
+    registerToolView(
+        {
+            nodes: [new NotificationsNode()],
+            view: 'aws.amazonq.notifications',
+            refreshCommands: [registerProvider],
+        },
+        context
+    )
 
-            const firstUse = AuthUtils.ExtensionUse.instance.isFirstUse()
-            const wasUpdated = AuthUtils.ExtensionUse.instance.wasUpdated()
+    let source
+    if (AuthUtils.ExtensionUse.instance.isFirstUse()) {
+        source = ExtStartUpSources.firstStartUp
+    } else if (AuthUtils.ExtensionUse.instance.wasUpdated()) {
+        source = ExtStartUpSources.update
+    } else {
+        source = ExtStartUpSources.reload
+    }
+    const authMetadata = await getAuthMetadata()
+    telemetry.auth_userState.emit({
+        passive: true,
+        source,
+        ...authMetadata,
+    })
 
-            if (firstUse) {
-                telemetry.record({ source: ExtStartUpSources.firstStartUp })
-            } else if (wasUpdated) {
-                telemetry.record({ source: ExtStartUpSources.update })
-            } else {
-                telemetry.record({ source: ExtStartUpSources.reload })
-            }
+    const controller = new NotificationsController(NotificationsNode.instance)
+    const engine = new RuleEngine(await getRuleContext(context))
+    void controller.pollForStartUp(engine)
+    void controller.pollForEmergencies(engine)
+    globals.clock.setInterval(
+        async () => controller.pollForEmergencies(new RuleEngine(await getRuleContext(context))),
+        1000 * 10
+    )
+}
 
-            let authState: AuthState = 'disconnected'
-            try {
-                // May call connection validate functions that try to refresh the token.
-                // This could result in network errors.
-                authState = (await AuthUtil.instance.getChatAuthState(false)).codewhispererChat
-            } catch (err) {
-                if (
-                    isNetworkError(err) &&
-                    AuthUtil.instance.conn &&
-                    AuthUtil.instance.auth.getConnectionState(AuthUtil.instance.conn) === 'valid'
-                ) {
-                    authState = 'connectedWithNetworkError'
-                } else {
-                    throw err
-                }
-            }
-            const currConn = AuthUtil.instance.conn
-            if (currConn !== undefined && !isAnySsoConnection(currConn)) {
-                getLogger().error(`Current Amazon Q connection is not SSO, type is: %s`, currConn?.type)
-            }
+async function getAuthMetadata(): Promise<Omit<AuthUserState, 'source'>> {
+    let authState: AuthState = 'disconnected'
+    try {
+        // May call connection validate functions that try to refresh the token.
+        // This could result in network errors.
+        authState = (await AuthUtil.instance.getChatAuthState(false)).codewhispererChat
+    } catch (err) {
+        if (
+            isNetworkError(err) &&
+            AuthUtil.instance.conn &&
+            AuthUtil.instance.auth.getConnectionState(AuthUtil.instance.conn) === 'valid'
+        ) {
+            authState = 'connectedWithNetworkError'
+        } else {
+            throw err
+        }
+    }
+    const currConn = AuthUtil.instance.conn
+    if (currConn !== undefined && !isAnySsoConnection(currConn)) {
+        getLogger().error(`Current Amazon Q connection is not SSO, type is: %s`, currConn?.type)
+    }
 
-            telemetry.record({
-                authStatus:
-                    authState === 'connected' || authState === 'expired' || authState === 'connectedWithNetworkError'
-                        ? authState
-                        : 'notConnected',
-                authEnabledConnections: AuthUtils.getAuthFormIdsFromConnection(currConn).join(','),
-                ...(await getTelemetryMetadataForConn(currConn)),
-            })
-        })
-        .catch((err) => getLogger().error('Error collecting telemetry for auth_userState: %s', err))
+    return {
+        authStatus:
+            authState === 'connected' || authState === 'expired' || authState === 'connectedWithNetworkError'
+                ? authState
+                : 'notConnected',
+        authEnabledConnections: AuthUtils.getAuthFormIdsFromConnection(currConn).join(','),
+        ...(await getTelemetryMetadataForConn(currConn)),
+    }
+}
+
+async function getRuleContext(context: vscode.ExtensionContext): Promise<RuleContext> {
+    const authMetadata = await getAuthMetadata()
+    return {
+        ideVersion: vscode.version,
+        extensionVersion: context.extension.packageJSON.version,
+        os: getOperatingSystem(),
+        computeEnv: await getComputeEnvType(),
+        authTypes: authMetadata.authEnabledConnections.split(','),
+        authRegions: authMetadata.awsRegion ? [authMetadata.awsRegion] : [],
+        authStates: [authMetadata.authStatus],
+        authScopes: authMetadata.authScopes ? authMetadata.authScopes?.split(',') : [],
+        installedExtensions: vscode.extensions.all.map((e) => e.id),
+        activeExtensions: vscode.extensions.all.filter((e) => e.isActive).map((e) => e.id),
+    }
 }
 
 export async function deactivateCommon() {

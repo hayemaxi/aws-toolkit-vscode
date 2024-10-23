@@ -7,6 +7,7 @@ import * as vscode from 'vscode'
 import { createToolView, ToolView } from './toolView'
 import { telemetry } from '../shared/telemetry/telemetry'
 import { CdkRootNode } from '../awsService/cdk/explorer/rootNode'
+import { isAmazonQ } from '../shared/extensionUtilities'
 
 /**
  * Activates vscode Views (eg tree view) that work in any vscode environment (nodejs or browser).
@@ -15,6 +16,9 @@ export async function activateViewsShared(context: vscode.ExtensionContext): Pro
 
 export function registerToolView(viewNode: ToolView, context: vscode.ExtensionContext) {
     const toolView = createToolView(viewNode)
+    if (viewNode.view.includes('notifications')) {
+        toolView.message = `New feature announcements and emergency notifications for ${isAmazonQ() ? 'Amazon Q' : 'AWS Toolkit'} will appear here.`
+    }
     context.subscriptions.push(toolView)
     if (viewNode.view === 'aws.cdk') {
         // Legacy CDK behavior. Mostly useful for C9 as they do not have inline buttons.
