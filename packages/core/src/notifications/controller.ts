@@ -8,6 +8,7 @@ import { ToolkitError } from '../shared/errors'
 import globals from '../shared/extensionGlobals'
 import { globalKey } from '../shared/globalState'
 import {
+    defaultNotificationsState,
     getNotificationTelemetryId,
     Notifications,
     NotificationsState,
@@ -42,13 +43,13 @@ const logger = getLogger('notifications')
  */
 export class NotificationsController {
     /** Internal memory state that is written to global state upon modification. */
-    private readonly state: NotificationsState
+    private state: NotificationsState
 
     static #instance: NotificationsController | undefined
 
     constructor(
         private readonly notificationsNode: NotificationsNode,
-        private readonly fetcher: NotificationFetcher = new RemoteFetcher(),
+        private readonly fetcher: NotificationFetcher,
         public readonly storageKey: globalKey = 'aws.notifications'
     ) {
         if (!NotificationsController.#instance) {
@@ -58,6 +59,11 @@ export class NotificationsController {
         NotificationsController.#instance = this
 
         this.state = this.getDefaultState()
+    }
+
+    public reset() {
+        this.state = defaultNotificationsState()
+        return this.writeState()
     }
 
     public pollForStartUp(ruleEngine: RuleEngine) {
@@ -203,12 +209,11 @@ export class NotificationsController {
      * Returns stored notification state, or a default state object if it is invalid or undefined.
      */
     private getDefaultState() {
-        return globals.globalState.tryGet<NotificationsState>(this.storageKey, NotificationsStateConstructor, {
-            startUp: {},
-            emergency: {},
-            dismissed: [],
-            newlyReceived: [],
-        })
+        return globals.globalState.tryGet<NotificationsState>(
+            this.storageKey,
+            NotificationsStateConstructor,
+            defaultNotificationsState()
+        )
     }
 
     static get instance() {
@@ -260,9 +265,9 @@ export class RemoteFetcher implements NotificationFetcher {
     public static readonly retryIntervalMs = 30000
 
     private readonly startUpEndpoint: string =
-        'https://idetoolkits-hostedfiles.amazonaws.com/Notifications/VSCode/startup/1.x.json'
+        'https://idetoolkits-hostedfiles.amazonaws.com/Notifications/integ/VSCode/startup/1.x.json'
     private readonly emergencyEndpoint: string =
-        'https://idetoolkits-hostedfiles.amazonaws.com/Notifications/VSCode/emergency/1.x.json'
+        'https://idetoolkits-hostedfiles.amazonaws.com/Notifications/integ/VSCode/emergency/1.x.json'
 
     constructor(startUpPath?: string, emergencyPath?: string) {
         this.startUpEndpoint = startUpPath ?? this.startUpEndpoint
@@ -317,6 +322,53 @@ export class LocalFetcher implements NotificationFetcher {
         return {
             content: await new FileResourceFetcher(globals.context.asAbsolutePath(uri)).get(),
             eTag: 'LOCAL_PATH',
+        }
+    }
+}
+
+/**
+ * Fetches notifications from global state for local testing and verification.
+ * Usage:
+ *   1. Set `"aws.dev.notifications": true` in your settings.
+ *   2. Open the extension Developer menu.
+ *   3. Reset the current notification state with `Notifications: Reset State` option.
+ *   4. Add notifications to the payload via the `Notifications: Edit Notifications` option.
+ *
+ * Reload to see your all new notifications. Emergency notifications will appear some time,
+ * once they are polled.
+ */
+export class DevFetcher implements NotificationFetcher {
+    constructor(public readonly storageKey: globalKey = 'aws.notifications.dev') {
+        if (globals.globalState.getStrict(this.storageKey, Object) === undefined) {
+            void globals.globalState.update(this.storageKey, this.getDefaultData())
+        }
+    }
+
+    async fetch(category: NotificationType, versionTag?: string): Promise<ResourceResponse> {
+        logger.debug('Fetching notifications in dev mode for category: %s', category)
+
+        const data: { startUp: Notifications; emergency: Notifications } = globals.globalState.getStrict(
+            this.storageKey,
+            Object,
+            this.getDefaultData()
+        )
+
+        return {
+            content: JSON.stringify(category === 'startUp' ? data.startUp : data.emergency),
+            eTag: 'DEV_MODE',
+        }
+    }
+
+    private getDefaultData() {
+        return {
+            startUp: {
+                schemaVersion: 'DEV_MODE',
+                notifications: [],
+            },
+            emergency: {
+                schemaVersion: 'DEV_MODE',
+                notifications: [],
+            },
         }
     }
 }

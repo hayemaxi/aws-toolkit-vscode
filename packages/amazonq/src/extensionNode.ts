@@ -18,7 +18,7 @@ import { Auth, AuthUtils, getTelemetryMetadataForConn, isAnySsoConnection } from
 import api from './api'
 import { activate as activateCWChat } from './app/chat/activation'
 import { beta } from 'aws-core-vscode/dev'
-import { activate as activateNotifications } from 'aws-core-vscode/notifications'
+import { activate as activateNotifications, NotificationsController } from 'aws-core-vscode/notifications'
 import { AuthState, AuthUtil } from 'aws-core-vscode/codewhisperer'
 import { telemetry, AuthUserState } from 'aws-core-vscode/telemetry'
 
@@ -122,13 +122,16 @@ async function setupDevMode(context: vscode.ExtensionContext) {
 
     const devOptions: DevOptions = {
         context,
-        auth: Auth.instance,
+        auth: () => Auth.instance,
+        notificationsController: () => NotificationsController.instance,
         menuOptions: [
             'editStorage',
             'showEnvVars',
             'deleteSsoConnections',
             'expireSsoConnections',
             'editAuthConnections',
+            'notificationsReset',
+            'notificationsEdit',
             'forceIdeCrash',
         ],
     }

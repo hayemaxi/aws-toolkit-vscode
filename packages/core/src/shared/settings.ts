@@ -762,6 +762,8 @@ const devSettings = {
     autofillStartUrl: String,
     webAuth: Boolean,
     notifications: Boolean,
+    notificationsPollInterval: Number,
+    notificationsEndpoints: Record(String, String),
 }
 type ResolvedDevSettings = FromDescriptor<typeof devSettings>
 type AwsDevSetting = keyof ResolvedDevSettings

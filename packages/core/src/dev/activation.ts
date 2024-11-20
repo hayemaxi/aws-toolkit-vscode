@@ -21,6 +21,7 @@ import { getEnvironmentSpecificMemento } from '../shared/utilities/mementos'
 import { setContext } from '../shared'
 import { telemetry } from '../shared/telemetry'
 import { getSessionId } from '../shared/telemetry/util'
+import { NotificationsController } from '../notifications/controller'
 
 interface MenuOption {
     readonly label: string
@@ -38,17 +39,21 @@ export type DevFunction =
     | 'deleteSsoConnections'
     | 'expireSsoConnections'
     | 'editAuthConnections'
+    | 'notificationsReset'
+    | 'notificationsEdit'
     | 'forceIdeCrash'
 
 export type DevOptions = {
     context: vscode.ExtensionContext
-    auth: Auth
+    auth: () => Auth
+    notificationsController: () => NotificationsController
     menuOptions?: DevFunction[]
 }
 
 let targetContext: vscode.ExtensionContext
 let globalState: vscode.Memento
 let targetAuth: Auth
+let targetNotificationsController: NotificationsController
 
 /**
  * Defines AWS Toolkit developer tools.
@@ -103,6 +108,16 @@ const menuOptions: () => Record<DevFunction, MenuOption> = () => {
             label: 'Auth: Edit Connections',
             detail: 'Opens editor to all Auth Connections the extension is using.',
             executor: editSsoConnections,
+        },
+        notificationsReset: {
+            label: 'Notifications: Reset State',
+            detail: 'Resets the in-memory and global state for notifications.',
+            executor: resetNotificationsState,
+        },
+        notificationsEdit: {
+            label: 'Notifications: Edit Notifications',
+            detail: 'Add/Change/Remove JSON notifications for testing.',
+            executor: editNotifications,
         },
         forceIdeCrash: {
             label: 'Crash: Force IDE ExtHost Crash',
@@ -163,7 +178,8 @@ export async function activate(ctx: vscode.ExtensionContext): Promise<void> {
             targetContext = opts.context
             // eslint-disable-next-line aws-toolkits/no-banned-usages
             globalState = targetContext.globalState
-            targetAuth = opts.auth
+            targetAuth = opts.auth()
+            targetNotificationsController = opts.notificationsController()
             const options = menuOptions()
             void openMenu(
                 entries(options)
@@ -286,6 +302,8 @@ interface Tab {
     dispose(): void
 }
 
+type StorageType = 'globalsView' | 'globals' | 'secrets' | 'auth' | 'notifications'
+
 class ObjectEditor {
     private static readonly scheme = 'aws-dev'
 
@@ -302,7 +320,7 @@ class ObjectEditor {
         vscode.workspace.registerFileSystemProvider(ObjectEditor.scheme, this.fs)
     }
 
-    public async openStorage(type: 'globalsView' | 'globals' | 'secrets' | 'auth', key: string): Promise<void> {
+    public async openStorage(type: StorageType, key: string): Promise<void> {
         switch (type) {
             case 'globalsView':
                 return showState('globalstate')
@@ -313,6 +331,8 @@ class ObjectEditor {
             case 'auth':
                 // Auth memento is determined in a different way
                 return this.openState(getEnvironmentSpecificMemento(), key)
+            case 'notifications':
+                return this.openState(globalState, key)
         }
     }
 
@@ -459,4 +479,12 @@ export const openStorageCommand = Commands.from(ObjectEditor).declareOpenStorage
 
 export async function updateDevMode() {
     await setContext('aws.isDevMode', DevSettings.instance.isDevMode())
+}
+
+async function resetNotificationsState() {
+    await targetNotificationsController.reset()
+}
+
+async function editNotifications() {
+    void openStorageCommand.execute('notifications', 'aws.notifications.dev')
 }

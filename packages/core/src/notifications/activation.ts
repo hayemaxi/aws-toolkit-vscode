@@ -5,7 +5,7 @@
 
 import * as vscode from 'vscode'
 import { DevSettings } from '../shared/settings'
-import { NotificationsController } from './controller'
+import { DevFetcher, NotificationFetcher, NotificationsController, RemoteFetcher } from './controller'
 import { NotificationsNode } from './panelNode'
 import { RuleEngine, getRuleContext } from './rules'
 import globals from '../shared/extensionGlobals'
@@ -16,8 +16,8 @@ import { oneMinute } from '../shared/datetime'
 const logger = getLogger('notifications')
 
 /** Time in MS to poll for emergency notifications */
-const emergencyPollTime = oneMinute * 10
-
+const emergencyPollTime = oneMinute * 0.2
+let interval: NodeJS.Timer
 /**
  * Activate the in-IDE notifications module and begin receiving notifications.
  *
@@ -30,25 +30,36 @@ export async function activate(
     initialState: AuthState,
     authStateFn: () => Promise<AuthState>
 ) {
+    let fetcher: NotificationFetcher = new RemoteFetcher()
     // TODO: Currently gated behind feature-flag.
-    if (!DevSettings.instance.get('notifications', false)) {
-        return
+    if (DevSettings.instance.get('notifications', false)) {
+        fetcher = new DevFetcher()
+        // return
     }
 
     try {
         const panelNode = NotificationsNode.instance
         panelNode.registerView(context)
 
-        const controller = new NotificationsController(panelNode)
+        const controller = new NotificationsController(panelNode, fetcher)
         const engine = new RuleEngine(await getRuleContext(context, initialState))
 
         await controller.pollForStartUp(engine)
         await controller.pollForEmergencies(engine)
 
-        globals.clock.setInterval(async () => {
-            const ruleContext = await getRuleContext(context, await authStateFn())
-            await controller.pollForEmergencies(new RuleEngine(ruleContext))
-        }, emergencyPollTime)
+        const setNotificationInterval = () => {
+            interval = globals.clock.setInterval(
+                async () => {
+                    globals.clock.clearInterval(interval)
+                    const ruleContext = await getRuleContext(context, await authStateFn())
+                    // void controller.dismissNotification('startup1')
+                    await controller.pollForEmergencies(new RuleEngine(ruleContext))
+                    setNotificationInterval()
+                },
+                DevSettings.instance.get('notificationsPollInterval', emergencyPollTime)
+            )
+        }
+        setNotificationInterval()
 
         logger.debug('Activated in-IDE notifications polling module')
     } catch (err) {
