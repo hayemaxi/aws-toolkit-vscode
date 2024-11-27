@@ -146,18 +146,24 @@ export function cancellableDebounce<T, U extends any[]>(
     }
 }
 
+type WithRetriesOptions = {
+    maxRetries?: number
+    delay?: number
+    backoff?: number
+    /** Function to log any exceptions. The error will still be thrown. */
+    logFn?: (err: any) => void
+}
+
 /**
  * Executes the given function, retrying if it throws.
  *
  * @param opts - if no opts given, defaults are used
  */
-export async function withRetries<T>(
-    fn: () => Promise<T>,
-    opts?: { maxRetries?: number; delay?: number; backoff?: number }
-): Promise<T> {
+export async function withRetries<T>(fn: () => Promise<T>, opts?: WithRetriesOptions): Promise<T> {
     const maxRetries = opts?.maxRetries ?? 3
     const delay = opts?.delay ?? 0
     const backoff = opts?.backoff ?? 1
+    const logFn = opts?.logFn
 
     let retryCount = 0
     let latestDelay = delay
@@ -165,6 +171,7 @@ export async function withRetries<T>(
         try {
             return await fn()
         } catch (err) {
+            logFn ? logFn(err) : undefined
             retryCount++
             if (retryCount >= maxRetries) {
                 throw err

@@ -25,6 +25,7 @@ import { withRetries } from '../shared/utilities/functionUtils'
 import { FileResourceFetcher } from '../shared/resourcefetcher/fileResourceFetcher'
 import { isAmazonQ } from '../shared/extensionUtilities'
 import { telemetry } from '../shared/telemetry/telemetry'
+import { oneSecond } from '../shared/datetime'
 
 const logger = getLogger('notifications')
 
@@ -257,7 +258,7 @@ export interface NotificationFetcher {
 
 export class RemoteFetcher implements NotificationFetcher {
     public static readonly retryNumber = 5
-    public static readonly retryIntervalMs = 30000
+    public static readonly retryInterval = oneSecond * 30
 
     private readonly startUpEndpoint: string =
         'https://idetoolkits-hostedfiles.amazonaws.com/Notifications/VSCode/startup/1.x.json'
@@ -276,21 +277,12 @@ export class RemoteFetcher implements NotificationFetcher {
         })
         logger.verbose('Attempting to fetch notifications for category: %s at endpoint: %s', category, endpoint)
 
-        return withRetries(
-            async () => {
-                try {
-                    return await fetcher.getNewETagContent(versionTag)
-                } catch (err) {
-                    logger.error('Failed to fetch at endpoint: %s, err: %s', endpoint, err)
-                    throw err
-                }
-            },
-            {
-                maxRetries: RemoteFetcher.retryNumber,
-                delay: RemoteFetcher.retryIntervalMs,
-                // No exponential backoff - necessary?
-            }
-        )
+        return withRetries(() => fetcher.getNewETagContent(versionTag), {
+            maxRetries: RemoteFetcher.retryNumber,
+            delay: RemoteFetcher.retryInterval,
+            logFn: (err: any) => logger.error('Failed to fetch at endpoint: %s, err: %s', endpoint, err),
+            // No exponential backoff - necessary?
+        })
     }
 }
 

@@ -246,7 +246,7 @@ export async function activate(context: vscode.ExtensionContext) {
             ...authState,
         })
 
-        void activateNotifications(context, authState, getAuthState)
+        activateNotifications(context, authState, getAuthState)
     } catch (error) {
         const stacktrace = (error as Error).stack?.split('\n')
         // truncate if the stacktrace is unusually long

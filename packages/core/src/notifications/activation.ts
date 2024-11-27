@@ -24,12 +24,12 @@ const emergencyPollTime = oneMinute * 10
  * @param initialState initial auth state
  * @param authStateFn fn to get current auth state
  */
-export async function activate(
+export function activate(
     context: vscode.ExtensionContext,
     initialState: AuthState,
     authStateFn: () => Promise<AuthState>
 ) {
-    try {
+    const run = async () => {
         const panelNode = NotificationsNode.instance
         panelNode.registerView(context)
 
@@ -43,9 +43,13 @@ export async function activate(
             const ruleContext = await getRuleContext(context, await authStateFn())
             await controller.pollForEmergencies(new RuleEngine(ruleContext))
         }, emergencyPollTime)
-
-        logger.debug('Activated in-IDE notifications polling module')
-    } catch (err) {
-        logger.error('Failed to activate in-IDE notifications module.')
     }
+
+    run()
+        .then(() => {
+            logger.debug('Activated in-IDE notifications polling module')
+        })
+        .catch((err) => {
+            logger.error('Failed to activate in-IDE notifications module: %O', err)
+        })
 }
