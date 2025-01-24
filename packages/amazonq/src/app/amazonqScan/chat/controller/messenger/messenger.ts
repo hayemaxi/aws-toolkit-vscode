@@ -10,7 +10,7 @@
 
 import { AuthFollowUpType, AuthMessageDataMap } from 'aws-core-vscode/amazonq'
 import {
-    FeatureAuthState,
+    AuthState,
     SecurityScanError,
     CodeWhispererConstants,
     SecurityScanStep,
@@ -78,17 +78,13 @@ export class Messenger {
         this.dispatcher.sendUpdatePromptProgress(new UpdatePromptProgressMessage(tabID, progressField))
     }
 
-    public async sendAuthNeededExceptionMessage(credentialState: FeatureAuthState, tabID: string) {
+    public async sendAuthNeededExceptionMessage(credentialState: AuthState, tabID: string) {
         let authType: AuthFollowUpType = 'full-auth'
         let message = AuthMessageDataMap[authType].message
 
-        switch (credentialState.amazonQ) {
+        switch (credentialState) {
             case 'disconnected':
                 authType = 'full-auth'
-                message = AuthMessageDataMap[authType].message
-                break
-            case 'unsupported':
-                authType = 'use-supported-auth'
                 message = AuthMessageDataMap[authType].message
                 break
             case 'expired':

@@ -665,7 +665,7 @@ class AuthFlowAuthorization extends SsoAccessTokenProvider {
 class WebAuthorization extends SsoAccessTokenProvider {
     private redirectUri = 'http://127.0.0.1:54321/oauth/callback'
 
-    override async registerClient(): Promise<ClientRegistration> {
+    override async registerClient() {
         const companyName = getIdeProperties().company
         return this.oidc.registerClient(
             {
@@ -679,7 +679,7 @@ class WebAuthorization extends SsoAccessTokenProvider {
             },
             this.profile.startUrl,
             'web auth code'
-        )
+        ) as Promise<ClientRegistration>
     }
 
     override async authorize(

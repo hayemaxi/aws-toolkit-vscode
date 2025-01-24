@@ -4,10 +4,10 @@
  */
 import assert from 'assert'
 import { BuilderIdKind, ExtensionUse, SsoKind, hasBuilderId, hasIamCredentials, hasSso } from '../../auth/utils'
-import { Connection, SsoConnection, scopesCodeCatalyst } from '../../auth/connection'
+import { Connection, SsoConnection } from '../../auth/connection'
 import { builderIdConnection, iamConnection, ssoConnection } from './testUtil'
-import { amazonQScopes } from '../../codewhisperer/util/authUtil'
 import globals from '../../shared/extensionGlobals'
+import { amazonQScopes, codeCatalystScopes } from '../../auth/scopes'
 
 describe('ExtensionUse.isFirstUse()', function () {
     let instance: ExtensionUse
@@ -75,7 +75,7 @@ describe('connection exists funcs', function () {
     }
     const ccBuilderIdConnection: SsoConnection = {
         ...builderIdConnection,
-        scopes: scopesCodeCatalyst,
+        scopes: codeCatalystScopes,
         label: 'codeCatalystBuilderId',
     }
     const ssoConnections: Connection[] = [

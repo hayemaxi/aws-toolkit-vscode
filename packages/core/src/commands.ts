@@ -47,6 +47,7 @@ import { isValidResponse } from './shared/wizards/wizard'
 import { CancellationError } from './shared/utilities/timeoutUtils'
 import { ToolkitError } from './shared/errors'
 import { setContext } from './shared'
+import { explorerScopes } from './auth/scopes'
 
 function switchConnections(auth: Auth | TreeNode | unknown) {
     if (!(auth instanceof Auth)) {
@@ -91,11 +92,13 @@ export function registerCommands(context: vscode.ExtensionContext) {
 
                     const region = await showRegionPrompter()
 
-                    const conn = await Auth.instance.createConnection(createSsoProfile(startUrl, region.id))
+                    const conn = await Auth.instance.createConnection(
+                        createSsoProfile(startUrl, region.id, explorerScopes)
+                    )
                     return Auth.instance.useConnection(conn)
                 }
                 case 'builderId': {
-                    return createBuilderIdConnection(Auth.instance)
+                    return createBuilderIdConnection(Auth.instance, explorerScopes)
                 }
             }
         }

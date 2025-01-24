@@ -586,7 +586,7 @@ export class ChatController {
 
         const credentialsState = await AuthUtil.instance.getChatAuthState()
 
-        if (credentialsState.codewhispererChat !== 'connected' && credentialsState.codewhispererCore !== 'connected') {
+        if (credentialsState !== 'connected') {
             await this.messenger.sendAuthNeededExceptionMessage(credentialsState, tabID, triggerID)
             return
         }
@@ -620,9 +620,7 @@ export class ChatController {
 
         const credentialsState = await AuthUtil.instance.getChatAuthState()
 
-        if (
-            !(credentialsState.codewhispererChat === 'connected' && credentialsState.codewhispererCore === 'connected')
-        ) {
+        if (credentialsState !== 'connected') {
             await this.messenger.sendAuthNeededExceptionMessage(credentialsState, tabID, triggerID)
             return
         }

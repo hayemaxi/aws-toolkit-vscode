@@ -8,17 +8,14 @@ import { assertTelemetry } from '../../../testUtil'
 import assert from 'assert'
 import { createTestAuth } from '../../../credentials/testUtil'
 import { Auth } from '../../../../auth'
-import { isBuilderIdConnection, isIdcSsoConnection, scopesSsoAccountAccess } from '../../../../auth/connection'
+import { isBuilderIdConnection, isIdcSsoConnection } from '../../../../auth/connection'
 import { getOpenExternalStub } from '../../../globalSetup.test'
 import { ToolkitLoginWebview } from '../../../../login/webview/vue/toolkit/backend_toolkit'
-import {
-    CodeCatalystAuthenticationProvider,
-    CodeCatalystAuthStorage,
-    defaultScopes,
-} from '../../../../codecatalyst/auth'
+import { CodeCatalystAuthenticationProvider, CodeCatalystAuthStorage } from '../../../../codecatalyst/auth'
 import { FakeSecretStorage } from '../../../fakeExtensionContext'
 import * as authUtils from '../../../../auth/utils'
 import globals from '../../../../shared/extensionGlobals'
+import { codeCatalystScopes, explorerScopes } from '../../../../auth/scopes'
 
 // TODO: remove auth page and tests
 describe('Toolkit Login', function () {
@@ -56,7 +53,7 @@ describe('Toolkit Login', function () {
         await backend.startBuilderIdSetup()
 
         assert.ok(isBuilderIdConnection(auth.activeConnection))
-        assert.deepStrictEqual(auth.activeConnection.scopes, defaultScopes)
+        assert.deepStrictEqual(auth.activeConnection.scopes, codeCatalystScopes)
         assert.deepStrictEqual(auth.activeConnection.state, 'valid')
 
         assertTelemetry('auth_addConnection', {
@@ -71,7 +68,7 @@ describe('Toolkit Login', function () {
         await backend.startEnterpriseSetup(startUrl, region)
 
         assert.ok(isIdcSsoConnection(auth.activeConnection))
-        assert.deepStrictEqual(auth.activeConnection.scopes, scopesSsoAccountAccess)
+        assert.deepStrictEqual(auth.activeConnection.scopes, explorerScopes)
         assert.deepStrictEqual(auth.activeConnection.state, 'valid')
         assert.deepStrictEqual(auth.activeConnection.startUrl, startUrl)
         assert.deepStrictEqual(auth.activeConnection.ssoRegion, region)
@@ -93,7 +90,7 @@ describe('Toolkit Login', function () {
         await backend.startEnterpriseSetup(startUrl, region)
 
         assert.ok(isIdcSsoConnection(auth.activeConnection))
-        assert.deepStrictEqual(auth.activeConnection.scopes, defaultScopes)
+        assert.deepStrictEqual(auth.activeConnection.scopes, codeCatalystScopes)
         assert.deepStrictEqual(auth.activeConnection.state, 'valid')
         assert.deepStrictEqual(auth.activeConnection.startUrl, startUrl)
         assert.deepStrictEqual(auth.activeConnection.ssoRegion, region)

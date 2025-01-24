@@ -10,7 +10,7 @@
 
 import { AuthFollowUpType, AuthMessageDataMap } from '../../../../amazonq/auth/model'
 import { JDKVersion, TransformationCandidateProject, transformByQState } from '../../../../codewhisperer/models/model'
-import { FeatureAuthState } from '../../../../codewhisperer/util/authUtil'
+import { AuthState } from '../../../../codewhisperer/util/authUtil'
 import * as CodeWhispererConstants from '../../../../codewhisperer/models/constants'
 import {
     AppToWebViewMessageDispatcher,
@@ -89,17 +89,13 @@ export class Messenger {
         this.dispatcher.sendUpdatePlaceholder(new UpdatePlaceholderMessage(tabID, newPlaceholder))
     }
 
-    public async sendAuthNeededExceptionMessage(credentialState: FeatureAuthState, tabID: string) {
+    public async sendAuthNeededExceptionMessage(credentialState: AuthState, tabID: string) {
         let authType: AuthFollowUpType = 'full-auth'
         let message = AuthMessageDataMap[authType].message
 
-        switch (credentialState.amazonQ) {
+        switch (credentialState) {
             case 'disconnected':
                 authType = 'full-auth'
-                message = AuthMessageDataMap[authType].message
-                break
-            case 'unsupported':
-                authType = 'use-supported-auth'
                 message = AuthMessageDataMap[authType].message
                 break
             case 'expired':

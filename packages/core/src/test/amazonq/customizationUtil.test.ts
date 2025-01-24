@@ -7,7 +7,6 @@ import * as sinon from 'sinon'
 import assert from 'assert'
 import { tryRegister } from '../testUtil'
 import {
-    amazonQScopes,
     AuthUtil,
     baseCustomization,
     Customization,
@@ -20,6 +19,7 @@ import { FeatureContext, globals } from '../../shared'
 import { resetCodeWhispererGlobalVariables } from '../codewhisperer/testUtil'
 import { createSsoProfile, createTestAuth } from '../credentials/testUtil'
 import { SsoConnection } from '../../auth'
+import { amazonQScopes } from '../../auth/scopes'
 
 const enterpriseSsoStartUrl = 'https://enterprise.awsapps.com/start'
 

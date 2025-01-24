@@ -26,7 +26,23 @@ export default {
                 await AuthUtil.instance.showReauthenticatePrompt()
             }
         },
+        /**
+         * @deprecated use getAuthState instead
+         *
+         * Legacy utility function for callers who expect auth state to be granular amongst Q features.
+         * In reality, everything shares 1 auth state.
+         *
+         * TODO: Is there a way to tell the calling extension that this is deprecated?
+         */
         async getChatAuthState() {
+            const state = AuthUtil.instance.getChatAuthState()
+            return {
+                codewhispererCore: state,
+                codewhispererChat: state,
+                amazonQ: state,
+            }
+        },
+        async getAuthState() {
             return AuthUtil.instance.getChatAuthState()
         },
     },

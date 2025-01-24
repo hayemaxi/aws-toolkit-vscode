@@ -38,14 +38,13 @@ import {
     isIamConnection,
     isValidCodeCatalystConnection,
     hasScopes,
-    scopesSsoAccountAccess,
     isSsoConnection,
 } from './connection'
 import { Commands, placeholder } from '../shared/vscode/commands2'
 import { Auth } from './auth'
 import { validateIsNewSsoUrl, validateSsoUrlFormat } from './sso/validation'
 import { getLogger } from '../shared/logger'
-import { AuthUtil, isValidAmazonQConnection, isValidCodeWhispererCoreConnection } from '../codewhisperer/util/authUtil'
+import { AuthUtil, isValidAmazonQConnection } from '../codewhisperer/util/authUtil'
 import { AuthFormId } from '../login/webview/vue/types'
 import { extensionVersion } from '../shared/vscode/env'
 import { ExtStartUpSources } from '../shared/telemetry'
@@ -60,6 +59,7 @@ import { EnvVarsCredentialsProvider } from './providers/envVarsCredentialsProvid
 import { showMessageWithUrl } from '../shared/utilities/messages'
 import { credentialHelpUrl } from '../shared/constants'
 import { ExtStartUpSource } from '../shared/telemetry/util'
+import { SsoScope, explorerScopes } from './scopes'
 
 // iam-only excludes Builder ID and IAM Identity Center from the list of valid connections
 // TODO: Understand if "iam" should include these from the list at all
@@ -88,18 +88,19 @@ export async function promptForConnection(auth: Auth, type?: 'iam' | 'iam-only' 
  * See {@link addScopes} for details about how scopes are requested for new and existing connections.
  */
 export async function promptAndUseConnection(...[auth, type]: Parameters<typeof promptForConnection>) {
+    if (isAmazonQ()) {
+        // Amazon Q does not support multiple connections.
+        throw new ToolkitError('promptAndUseConnection() cannot be called from Amazon Q.')
+    }
     return telemetry.aws_setCredentials.run(async (span) => {
         let conn = await promptForConnection(auth, type)
         if (!conn) {
             throw new CancellationError('user')
         }
 
-        // HACK: We assume that if we are toolkit we want AWS account scopes.
-        // TODO: Although, Q shouldn't enter this codepath anyways.
-        // We should deprecate any codepath in Q that may enter this.
-        if (!isAmazonQ() && isSsoConnection(conn) && !hasScopes(conn, scopesSsoAccountAccess)) {
+        if (isSsoConnection(conn) && !hasScopes(conn, explorerScopes)) {
             try {
-                conn = await addScopes(conn, scopesSsoAccountAccess)
+                conn = await addScopes(conn, explorerScopes)
             } catch (e: any) {
                 throw new ToolkitError(`Failed to use connection${conn.label ? `: ${conn.label}` : '.'}`, e)
             }
@@ -208,7 +209,7 @@ export const createIamItem = () =>
         detail: 'Activates working with resources in the Explorer. Not supported by CodeWhisperer. Requires an access key ID and secret access key.',
     }) as DataQuickPickItem<'iam'>
 
-export async function createStartUrlPrompter(title: string, requiredScopes?: string[]) {
+export async function createStartUrlPrompter(title: string, requiredScopes?: SsoScope[]) {
     const existingConnections = (await Auth.instance.listConnections()).filter(isAnySsoConnection)
 
     function validateSsoUrl(url: string) {
@@ -228,7 +229,7 @@ export async function createStartUrlPrompter(title: string, requiredScopes?: str
     })
 }
 
-export async function createBuilderIdConnection(auth: Auth, scopes?: string[]) {
+export async function createBuilderIdConnection(auth: Auth, scopes: SsoScope[]) {
     return telemetry.function_call.run(
         async () => {
             const newProfile = createBuilderIdProfile(scopes)
@@ -609,7 +610,7 @@ export async function findSsoConnections(
     switch (kind) {
         case 'codewhisperer':
             predicate = (conn?: Connection) => {
-                return isIdcSsoConnection(conn) && isValidCodeWhispererCoreConnection(conn)
+                return isIdcSsoConnection(conn) && isValidAmazonQConnection(conn)
             }
             break
         case 'codecatalyst':
@@ -646,7 +647,7 @@ async function findBuilderIdConnections(
     switch (kind) {
         case 'codewhisperer':
             predicate = (conn?: Connection) => {
-                return isBuilderIdConnection(conn) && isValidCodeWhispererCoreConnection(conn)
+                return isBuilderIdConnection(conn) && isValidAmazonQConnection(conn)
             }
             break
         case 'codecatalyst':
@@ -768,7 +769,7 @@ export function getAuthFormIdsFromConnection(conn?: Connection): AuthFormId[] {
         connType = 'builderId'
     } else if (isIdcSsoConnection(conn)) {
         connType = 'identityCenter'
-        if (hasScopes(conn, scopesSsoAccountAccess)) {
+        if (hasScopes(conn, explorerScopes)) {
             authIds.push('identityCenterExplorer')
         }
     } else {
@@ -793,9 +794,9 @@ export function initializeCredentialsProviderManager() {
 
 export async function getAuthType() {
     let authType: CredentialSourceId | undefined = undefined
-    if (AuthUtil.instance.isEnterpriseSsoInUse() && AuthUtil.instance.isConnectionValid()) {
+    if (isIdcSsoConnection(AuthUtil.instance.conn) && AuthUtil.instance.isConnectionValid()) {
         authType = 'iamIdentityCenter'
-    } else if (AuthUtil.instance.isBuilderIdInUse() && AuthUtil.instance.isConnectionValid()) {
+    } else if (isBuilderIdConnection(AuthUtil.instance.conn) && AuthUtil.instance.isConnectionValid()) {
         authType = 'awsId'
     }
     return authType

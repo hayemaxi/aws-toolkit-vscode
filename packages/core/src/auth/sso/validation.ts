@@ -7,6 +7,7 @@ import { UnknownError } from '../../shared/errors'
 import { Auth } from '../auth'
 import { SsoConnection, hasScopes, isAnySsoConnection } from '../connection'
 import { ssoUrlFormatMessage, ssoUrlFormatRegex } from './constants'
+import { SsoScope } from '../scopes'
 
 /**
  * Returns an error message if the url is not properly formatted.
@@ -21,7 +22,7 @@ export function validateSsoUrlFormat(url: string) {
 export async function validateIsNewSsoUrlAsync(
     auth: Auth,
     url: string,
-    requiredScopes?: string[]
+    requiredScopes?: SsoScope[]
 ): Promise<string | undefined> {
     return auth.listConnections().then((conns) => {
         return validateIsNewSsoUrl(url, requiredScopes, conns.filter(isAnySsoConnection))
@@ -30,7 +31,7 @@ export async function validateIsNewSsoUrlAsync(
 
 export function validateIsNewSsoUrl(
     url: string,
-    requiredScopes?: string[],
+    requiredScopes?: SsoScope[],
     existingSsoConns: SsoConnection[] = []
 ): string | undefined {
     try {

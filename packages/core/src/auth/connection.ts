@@ -18,20 +18,12 @@ import { AuthModifyConnection, telemetry } from '../shared/telemetry/telemetry'
 import { asStringifiedStack } from '../shared/telemetry/spans'
 import { getTelemetryReason, getTelemetryReasonDesc } from '../shared/errors'
 import { builderIdStartUrl } from './sso/constants'
+import { SsoScope, codeCatalystScopes, explorerScopes } from './scopes'
 
 /** Shows a warning message unless it is the same as the last one shown. */
 const warnOnce = onceChanged((s: string, url: string) => {
     void showMessageWithUrl(s, url, undefined, 'warn')
 })
-
-// TODO: Refactor all scopes to a central file with minimal dependencies.
-export const scopesCodeCatalyst = ['codecatalyst:read_write']
-export const scopesSsoAccountAccess = ['sso:account:access']
-/** These are the non-chat scopes for CW. */
-export const scopesCodeWhispererCore = ['codewhisperer:completions', 'codewhisperer:analysis']
-export const scopesCodeWhispererChat = ['codewhisperer:conversations']
-export const scopesFeatureDev = ['codewhisperer:taskassist']
-export const scopesGumby = ['codewhisperer:transformations']
 
 export const defaultSsoRegion = 'us-east-1'
 
@@ -69,9 +61,9 @@ export const isIdcSsoConnection = (conn?: Connection): conn is SsoConnection => 
 export const isBuilderIdConnection = (conn?: Connection): conn is SsoConnection => isSsoConnection(conn, 'builderId')
 
 export const isValidCodeCatalystConnection = (conn?: Connection): conn is SsoConnection =>
-    isSsoConnection(conn) && hasScopes(conn, scopesCodeCatalyst)
+    isSsoConnection(conn) && hasScopes(conn, codeCatalystScopes)
 
-export function hasScopes(target: SsoConnection | SsoProfile | string[], scopes: string[]): boolean {
+export function hasScopes(target: SsoConnection | SsoProfile | string[], scopes: SsoScope[]): boolean {
     return scopes?.every((s) => (Array.isArray(target) ? target : target.scopes)?.includes(s))
 }
 
@@ -79,14 +71,12 @@ export function hasScopes(target: SsoConnection | SsoProfile | string[], scopes:
  * Stricter version of hasScopes that checks for all and only all of the predicate scopes.
  * Not optimized, but the set of possible scopes is currently very small (< 8)
  */
-export function hasExactScopes(target: SsoConnection | SsoProfile | string[], scopes: string[]): boolean {
+export function hasExactScopes(target: SsoConnection | SsoProfile | string[], scopes: SsoScope[]): boolean {
     const targetScopes = Array.isArray(target) ? target : (target.scopes ?? [])
     return scopes.length === targetScopes.length && scopes.every((s) => targetScopes.includes(s))
 }
 
-export function createBuilderIdProfile(
-    scopes = [...scopesSsoAccountAccess]
-): SsoProfile & { readonly scopes: string[] } {
+export function createBuilderIdProfile(scopes: SsoScope[]): SsoProfile & { readonly scopes: SsoScope[] } {
     return {
         scopes,
         type: 'sso',
@@ -95,11 +85,12 @@ export function createBuilderIdProfile(
     }
 }
 
+// TODO: Type scopes
 export function createSsoProfile(
     startUrl: string,
     region = 'us-east-1',
-    scopes = [...scopesSsoAccountAccess]
-): SsoProfile & { readonly scopes: string[] } {
+    scopes: SsoScope[]
+): SsoProfile & { readonly scopes: SsoScope[] } {
     return {
         scopes,
         type: 'sso',
@@ -138,7 +129,7 @@ export interface SsoProfile {
     readonly type: 'sso'
     readonly ssoRegion: string
     readonly startUrl: string
-    readonly scopes?: string[]
+    readonly scopes?: SsoScope[]
 }
 
 interface BaseIamProfile {
@@ -457,7 +448,7 @@ export async function* loadLinkedProfilesIntoStore(
     }
 
     /** Does `ssoProfile` have scopes other than "sso:account:access"? */
-    const hasScopes = !!ssoProfile.scopes?.some((s) => !scopesSsoAccountAccess.includes(s))
+    const hasScopes = !!ssoProfile.scopes?.some((s) => !explorerScopes.includes(s))
     if (!hasScopes && (accounts.size === 0 || found.size === 0)) {
         // SSO user has no OIDC scopes nor IAM roles. Possible causes:
         // - user is not an "Assigned user" in any account in the SSO org
@@ -497,7 +488,7 @@ export interface AwsConnection {
     readonly type: string
     readonly ssoRegion: string
     readonly startUrl: string
-    readonly scopes?: string[]
+    readonly scopes?: SsoScope[]
     readonly state: ProfileMetadata['connectionState']
 }
 

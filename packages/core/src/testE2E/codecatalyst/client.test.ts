@@ -30,13 +30,9 @@ import { toStream } from '../../shared/utilities/collectionUtils'
 import { toCollection } from '../../shared/utilities/asyncCollection'
 import { getLogger } from '../../shared/logger'
 import { isAwsError, ToolkitError } from '../../shared/errors'
-import {
-    scopesCodeCatalyst,
-    createBuilderIdProfile,
-    isValidCodeCatalystConnection,
-    SsoConnection,
-} from '../../auth/connection'
+import { createBuilderIdProfile, isValidCodeCatalystConnection, SsoConnection } from '../../auth/connection'
 import { hasKey } from '../../shared/utilities/tsUtils'
+import { codeCatalystScopes } from '../../auth/scopes'
 
 let spaceName: CodeCatalystOrg['name']
 let projectName: CodeCatalystProject['name']
@@ -445,7 +441,7 @@ describe('Test how this codebase uses the CodeCatalyst API', function () {
      */
     async function useCodeCatalystSsoConnection(auth: Auth): Promise<SsoConnection> {
         const builderIdSsoConnection = (await auth.listConnections()).find(isValidCodeCatalystConnection)
-        const conn = builderIdSsoConnection ?? (await auth.createConnection(createBuilderIdProfile(scopesCodeCatalyst)))
+        const conn = builderIdSsoConnection ?? (await auth.createConnection(createBuilderIdProfile(codeCatalystScopes)))
 
         return auth.useConnection(conn)
     }

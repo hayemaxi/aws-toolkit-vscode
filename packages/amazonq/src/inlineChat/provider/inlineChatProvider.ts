@@ -100,9 +100,7 @@ export class InlineChatProvider {
         const tabID = triggerEvent.tabID
 
         const credentialsState = await AuthUtil.instance.getChatAuthState()
-        if (
-            !(credentialsState.codewhispererChat === 'connected' && credentialsState.codewhispererCore === 'connected')
-        ) {
+        if (credentialsState !== 'connected') {
             const { message } = extractAuthFollowUp(credentialsState)
             this.errorEmitter.fire()
             throw new ToolkitError(message)

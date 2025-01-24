@@ -17,6 +17,7 @@ import { asStringifiedStack } from '../shared/telemetry/spans'
 import { withTelemetryContext } from '../shared/telemetry/util'
 import { isNetworkError } from '../shared/errors'
 import globals from '../shared/extensionGlobals'
+import { SsoScope } from './scopes'
 
 export type ToolId = 'codecatalyst' | 'codewhisperer' | 'testId'
 
@@ -283,7 +284,7 @@ export class SecondaryAuth<T extends Connection = Connection> {
         return conn
     }
 
-    public async addScopes(conn: T & SsoConnection, extraScopes: string[]) {
+    public async addScopes(conn: T & SsoConnection, extraScopes: SsoScope[]) {
         return await addScopes(conn, extraScopes, this.auth)
     }
 
@@ -394,7 +395,7 @@ export class SecondaryAuth<T extends Connection = Connection> {
  *
  * Note: This should exist in connection.ts or utils.ts, but due to circular dependencies, it must go here.
  */
-export async function addScopes(conn: SsoConnection, extraScopes: string[], auth = Auth.instance) {
+export async function addScopes(conn: SsoConnection, extraScopes: SsoScope[], auth = Auth.instance) {
     return telemetry.function_call.run(
         async () => {
             const oldScopes = conn.scopes ?? []
@@ -417,7 +418,7 @@ export async function addScopes(conn: SsoConnection, extraScopes: string[], auth
     )
 }
 
-export function setScopes(conn: SsoConnection, scopes: string[], auth = Auth.instance): Promise<SsoConnection> {
+export function setScopes(conn: SsoConnection, scopes: SsoScope[], auth = Auth.instance): Promise<SsoConnection> {
     return telemetry.function_call.run(
         () => {
             return auth.updateConnection(conn, {

@@ -156,7 +156,7 @@ export class GumbyController {
             getLogger().debug(`${featureName}: Session created with id: ${session.tabID}`)
 
             const authState = await AuthUtil.instance.getChatAuthState()
-            if (authState.amazonQ !== 'connected') {
+            if (authState !== 'connected') {
                 void this.messenger.sendAuthNeededExceptionMessage(authState, tabID)
                 session.isAuthenticating = true
                 return
@@ -256,10 +256,10 @@ export class GumbyController {
             })
 
             const authState = await AuthUtil.instance.getChatAuthState()
-            if (authState.amazonQ !== 'connected') {
+            if (authState !== 'connected') {
                 this.sessionStorage.getSession().isAuthenticating = true
                 await this.messenger.sendAuthNeededExceptionMessage(authState, message.tabID)
-                throw new AuthError('Not connected to Amazon Q', `AuthState=${authState.amazonQ}`)
+                throw new AuthError('Not connected to Amazon Q', `AuthState=${authState}`)
             }
             this.messenger.sendTransformationIntroduction(message.tabID)
         })
@@ -541,7 +541,7 @@ export class GumbyController {
 
         // since compilation can potentially take a long time, double check auth
         const authState = await AuthUtil.instance.getChatAuthState()
-        if (authState.amazonQ !== 'connected') {
+        if (authState !== 'connected') {
             void this.messenger.sendAuthNeededExceptionMessage(authState, message.tabID)
             this.sessionStorage.getSession().isAuthenticating = true
             return

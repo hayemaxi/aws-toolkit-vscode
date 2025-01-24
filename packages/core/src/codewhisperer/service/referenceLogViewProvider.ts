@@ -11,6 +11,7 @@ import { CodeWhispererSettings } from '../util/codewhispererSettings'
 import globals from '../../shared/extensionGlobals'
 import { AuthUtil } from '../util/authUtil'
 import { session } from '../util/codeWhispererSession'
+import { isIdcSsoConnection } from '../../auth/connection'
 
 export class ReferenceLogViewProvider implements vscode.WebviewViewProvider {
     public static readonly viewType = 'aws.codeWhisperer.referenceLog'
@@ -119,7 +120,7 @@ export class ReferenceLogViewProvider implements vscode.WebviewViewProvider {
 
         let prompt = ''
         if (showPrompt) {
-            if (AuthUtil.instance.isEnterpriseSsoInUse()) {
+            if (isIdcSsoConnection(AuthUtil.instance.conn)) {
                 prompt = CodeWhispererConstants.referenceLogPromptTextEnterpriseSSO
             } else {
                 prompt = CodeWhispererConstants.referenceLogPromptText

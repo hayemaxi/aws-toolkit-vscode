@@ -106,11 +106,7 @@ describe('Controller', () => {
             scheme: featureDevScheme,
         })
 
-        sinon.stub(AuthUtil.instance, 'getChatAuthState').resolves({
-            codewhispererCore: 'connected',
-            codewhispererChat: 'connected',
-            amazonQ: 'connected',
-        })
+        sinon.stub(AuthUtil.instance, 'getChatAuthState').resolves('connected')
     })
 
     afterEach(() => {

@@ -50,7 +50,6 @@ import { getTelemetryMetadataForConn } from './auth/connection'
 import { registerSubmitFeedback } from './feedback/vue/submitFeedback'
 import { activateCommon, deactivateCommon } from './extension'
 import { learnMoreAmazonQCommand, qExtensionPageCommand, dismissQTree } from './amazonq/explorer/amazonQChildrenNodes'
-import { codeWhispererCoreScopes } from './codewhisperer/util/authUtil'
 import { installAmazonQExtension } from './codewhisperer/commands/basicCommands'
 import { isExtensionInstalled, VSCODE_EXTENSION_ID } from './shared/utilities'
 import { ExtensionUse, getAuthFormIdsFromConnection, initializeCredentialsProviderManager } from './auth/utils'
@@ -59,6 +58,7 @@ import { activate as activateThreatComposerEditor } from './threatComposer/activ
 import { isSsoConnection, hasScopes } from './auth/connection'
 import { CrashMonitoring, setContext } from './shared'
 import { AuthFormId } from './login/webview/vue/types'
+import { amazonQScopes } from './auth/scopes'
 
 let localize: nls.LocalizeFunc
 
@@ -132,7 +132,7 @@ export async function activate(context: vscode.ExtensionContext) {
                 // connections anymore.
                 // TODO: Remove after some time?
                 for (const conn of await Auth.instance.listConnections()) {
-                    if (isSsoConnection(conn) && hasScopes(conn, codeWhispererCoreScopes)) {
+                    if (isSsoConnection(conn) && hasScopes(conn, amazonQScopes)) {
                         getLogger().debug(
                             `forgetting connection: ${conn.id} with starturl/scopes: ${conn.startUrl} / %O`,
                             conn.scopes

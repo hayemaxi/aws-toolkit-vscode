@@ -25,9 +25,10 @@ import { getLogger } from '../shared/logger/logger'
 import { DevEnvActivityStarter } from './devEnv'
 import { learnMoreCommand, onboardCommand, reauth } from './explorer'
 import { isInDevEnv } from '../shared/vscode/env'
-import { hasScopes, scopesCodeWhispererCore, getTelemetryMetadataForConn } from '../auth/connection'
+import { hasScopes, getTelemetryMetadataForConn } from '../auth/connection'
 import { telemetry } from '../shared/telemetry/telemetry'
 import { asStringifiedStack } from '../shared/telemetry/spans'
+import { amazonQScopes } from '../auth/scopes'
 
 const localize = nls.loadMessageBundle()
 
@@ -50,7 +51,8 @@ export async function activate(ctx: ExtContext): Promise<void> {
     // Forget Amazon Q connections while we transition to separate auth sessions per extension.
     // Note: credentials on disk in the dev env cannot have Q scopes, so it will never be forgotten.
     // TODO: Remove after some time?
-    if (authProvider.isConnected() && hasScopes(authProvider.activeConnection!, scopesCodeWhispererCore)) {
+    // todo check scopes
+    if (authProvider.isConnected() && hasScopes(authProvider.activeConnection!, amazonQScopes)) {
         await telemetry.function_call.run(
             async () => {
                 await telemetry.auth_modifyConnection.run(async () => {

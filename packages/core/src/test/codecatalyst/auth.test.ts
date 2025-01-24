@@ -4,13 +4,14 @@
  */
 
 import assert from 'assert'
-import { CodeCatalystAuthStorage, CodeCatalystAuthenticationProvider, defaultScopes } from '../../codecatalyst/auth'
+import { CodeCatalystAuthStorage, CodeCatalystAuthenticationProvider } from '../../codecatalyst/auth'
 import { getTestWindow } from '../shared/vscode/window'
 import { FakeSecretStorage } from '../fakeExtensionContext'
 import { createBuilderIdProfile, createSsoProfile, createTestAuth } from '../credentials/testUtil'
 import Sinon from 'sinon'
 import { isAnySsoConnection } from '../../auth/connection'
 import globals from '../../shared/extensionGlobals'
+import { SsoScope, codeCatalystScopes } from '../../auth/scopes'
 
 const enterpriseSsoStartUrl = 'https://enterprise.awsapps.com/start'
 
@@ -52,7 +53,7 @@ describe('CodeCatalystAuthenticationProvider', async function () {
                 assert.ok(message.modal)
                 message.selectItem('Proceed')
             })
-            const otherScope = 'my:other:scope'
+            const otherScope: SsoScope = 'my:other:scope' as unknown as SsoScope
             const ssoConn = await auth.createInvalidSsoConnection(createBuilderIdProfile({ scopes: [otherScope] }))
 
             // Method under test
@@ -61,7 +62,7 @@ describe('CodeCatalystAuthenticationProvider', async function () {
             const conn = codecatalystAuth.activeConnection
             assert.strictEqual(conn?.type, 'sso')
             assert.strictEqual(conn.label, 'AWS Builder ID')
-            assert.deepStrictEqual(conn.scopes, [otherScope, ...defaultScopes])
+            assert.deepStrictEqual(conn.scopes, [otherScope, ...codeCatalystScopes])
         })
 
         it('does not prompt to sign out of duplicate builder ID connections', async function () {
@@ -101,7 +102,7 @@ describe('CodeCatalystAuthenticationProvider', async function () {
                 assert.ok(message.modal)
                 message.selectItem('Proceed')
             })
-            const otherScope = 'my:other:scope'
+            const otherScope: SsoScope = 'my:other:scope' as unknown as SsoScope
             const ssoConn = await auth.createInvalidSsoConnection(
                 createSsoProfile({ startUrl: enterpriseSsoStartUrl, scopes: [otherScope] })
             )
@@ -112,7 +113,7 @@ describe('CodeCatalystAuthenticationProvider', async function () {
             const conn = codecatalystAuth.activeConnection
             assert.strictEqual(conn?.type, 'sso')
             assert.strictEqual(conn.label, 'IAM Identity Center (enterprise)')
-            assert.deepStrictEqual(conn.scopes, [otherScope, ...defaultScopes])
+            assert.deepStrictEqual(conn.scopes, [otherScope, ...codeCatalystScopes])
         })
     })
 

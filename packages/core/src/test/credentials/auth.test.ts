@@ -17,11 +17,13 @@ import { makeTemporaryToolkitFolder } from '../../shared/filesystemUtilities'
 import { SharedCredentialsProviderFactory } from '../../auth/providers/sharedCredentialsProviderFactory'
 import { UserCredentialsUtils } from '../../shared/credentials/userCredentialsUtils'
 import { getCredentialsFilename } from '../../auth/credentials/sharedCredentialsFile'
-import { Connection, isIamConnection, isSsoConnection, scopesSsoAccountAccess } from '../../auth/connection'
+import { Connection, isIamConnection, isSsoConnection } from '../../auth/connection'
 import { AuthNode, createDeleteConnectionButton, promptForConnection } from '../../auth/utils'
+import { SsoScope, explorerScopes } from '../../auth/scopes'
 
 const ssoProfile = createSsoProfile()
-const scopedSsoProfile = createSsoProfile({ scopes: ['foo'] })
+const scopes: SsoScope[] = ['my:test:scope'] as unknown as SsoScope[]
+const scopedSsoProfile = createSsoProfile({ scopes })
 
 describe('Auth', function () {
     let auth: ReturnType<typeof createTestAuth>
@@ -230,7 +232,7 @@ describe('Auth', function () {
     describe('updateConnection', function () {
         const updatedProfile = createSsoProfile({
             ...ssoProfile,
-            scopes: [...(ssoProfile.scopes ?? []), 'my:scope'],
+            scopes: [...(ssoProfile.scopes ?? []), 'codecatalyst:read_write'],
         })
 
         it('keeps the same connection id after updating', async function () {
@@ -351,7 +353,7 @@ describe('Auth', function () {
     })
 
     describe('Linked Connections', function () {
-        const linkedSsoProfile = createSsoProfile({ scopes: scopesSsoAccountAccess })
+        const linkedSsoProfile = createSsoProfile({ scopes: explorerScopes })
         const accountRoles = [
             { accountId: '1245678910', roleName: 'foo' },
             { accountId: '9876543210', roleName: 'foo' },
@@ -461,7 +463,7 @@ describe('Auth', function () {
         })
 
         describe('Multiple Connections', function () {
-            const otherProfile = createBuilderIdProfile({ scopes: scopesSsoAccountAccess })
+            const otherProfile = createBuilderIdProfile({ scopes: explorerScopes })
 
             // Equivalent profiles from multiple sources is a fairly rare situation right now
             // Ideally they would be de-duped although the implementation can be tricky
@@ -478,7 +480,7 @@ describe('Auth', function () {
             })
 
             it('does not stop discovery if one connection fails', async function () {
-                const otherProfile = createBuilderIdProfile({ scopes: scopesSsoAccountAccess })
+                const otherProfile = createBuilderIdProfile({ scopes: explorerScopes })
                 await auth.createConnection(linkedSsoProfile)
                 await auth.createConnection(otherProfile)
                 auth.ssoClient.listAccounts.onFirstCall().rejects(new Error('No access'))

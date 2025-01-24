@@ -98,6 +98,7 @@ import { setContext } from '../shared/vscode/setContext'
 import { syncSecurityIssueWebview } from './views/securityIssue/securityIssueWebview'
 import { detectCommentAboveLine } from '../shared/utilities/commentUtils'
 import { UserWrittenCodeTracker } from './tracker/userWrittenCodeTracker'
+import { isIdcSsoConnection } from '../auth/connection'
 
 let localize: nls.LocalizeFunc
 
@@ -159,7 +160,7 @@ export async function activate(context: ExtContext): Promise<void> {
 
             if (configurationChangeEvent.affectsConfiguration('amazonQ.showInlineCodeSuggestionsWithCodeReferences')) {
                 ReferenceLogViewProvider.instance.update()
-                if (auth.isEnterpriseSsoInUse()) {
+                if (isIdcSsoConnection(auth.conn)) {
                     await vscode.window
                         .showInformationMessage(
                             CodeWhispererConstants.ssoConfigAlertMessage,
@@ -174,7 +175,7 @@ export async function activate(context: ExtContext): Promise<void> {
             }
 
             if (configurationChangeEvent.affectsConfiguration('amazonQ.shareContentWithAWS')) {
-                if (auth.isEnterpriseSsoInUse()) {
+                if (isIdcSsoConnection(auth.conn)) {
                     await vscode.window
                         .showInformationMessage(
                             CodeWhispererConstants.ssoConfigAlertMessageShareData,
@@ -370,7 +371,7 @@ export async function activate(context: ExtContext): Promise<void> {
                     const defaulMsg = localize('AWS.generic.message.error', 'Failed to reauth:')
                     void logAndShowError(localize, e, 'showReauthenticatePrompt', defaulMsg)
                 })
-                if (auth.isEnterpriseSsoInUse()) {
+                if (isIdcSsoConnection(auth.conn)) {
                     await auth.notifySessionConfiguration()
                 }
             }

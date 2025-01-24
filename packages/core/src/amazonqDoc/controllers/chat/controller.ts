@@ -221,7 +221,7 @@ export class DocController {
 
             const authState = await AuthUtil.instance.getChatAuthState()
 
-            if (authState.amazonQ !== 'connected') {
+            if (authState !== 'connected') {
                 await this.messenger.sendAuthNeededExceptionMessage(authState, data.tabID)
                 session.isAuthenticating = true
                 return
@@ -448,7 +448,7 @@ export class DocController {
             getLogger().debug(`${featureName}: Processing message: ${message.message}`)
 
             const authState = await AuthUtil.instance.getChatAuthState()
-            if (authState.amazonQ !== 'connected') {
+            if (authState !== 'connected') {
                 await this.messenger.sendAuthNeededExceptionMessage(authState, message.tabID)
                 session.isAuthenticating = true
                 return
@@ -483,7 +483,7 @@ export class DocController {
             this.mode = Mode.NONE
 
             const authState = await AuthUtil.instance.getChatAuthState()
-            if (authState.amazonQ !== 'connected') {
+            if (authState !== 'connected') {
                 void this.messenger.sendAuthNeededExceptionMessage(authState, message.tabID)
                 session.isAuthenticating = true
                 return

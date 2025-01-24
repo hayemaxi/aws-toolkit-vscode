@@ -49,15 +49,12 @@ import {
     SsoProfile,
     StatefulConnection,
     StoredProfile,
-    scopesCodeCatalyst,
     createBuilderIdProfile,
     createSsoProfile,
     hasScopes,
     loadIamProfilesIntoStore,
     loadLinkedProfilesIntoStore,
-    scopesSsoAccountAccess,
     AwsConnection,
-    scopesCodeWhispererCore,
     ProfileNotFoundError,
     isSsoConnection,
 } from './connection'
@@ -69,6 +66,7 @@ import { withTelemetryContext } from '../shared/telemetry/util'
 import { DiskCacheError } from '../shared/utilities/cacheUtils'
 import { setContext } from '../shared/vscode/setContext'
 import { builderIdStartUrl, internalStartUrl } from './sso/constants'
+import { amazonQScopes, codeCatalystScopes, explorerScopes } from './scopes'
 
 interface AuthService {
     /**
@@ -294,7 +292,7 @@ export class Auth implements AuthService, ConnectionManager {
             ): entry is [string, StoredProfile<SsoProfile>] => {
                 const r =
                     entry[1].type === 'sso' &&
-                    hasScopes(entry[1], scopesSsoAccountAccess) &&
+                    hasScopes(entry[1], explorerScopes) &&
                     entry[1].metadata.connectionState === 'valid'
                 return r
             }
@@ -766,8 +764,8 @@ export class Auth implements AuthService, ConnectionManager {
         }
 
         return startUrl === builderIdStartUrl
-            ? [identifier, createBuilderIdProfile(scopesCodeCatalyst)]
-            : [identifier, createSsoProfile(startUrl, region, scopesCodeCatalyst)]
+            ? [identifier, createBuilderIdProfile(codeCatalystScopes)]
+            : [identifier, createSsoProfile(startUrl, region, codeCatalystScopes)]
     }
 
     private getSsoTokenProvider(id: Connection['id'], profile: StoredProfile<SsoProfile>) {
@@ -778,7 +776,7 @@ export class Auth implements AuthService, ConnectionManager {
         // no longer matches this condition.
         const shouldUseSoftwareStatement =
             getCodeCatalystDevEnvId() !== undefined &&
-            profile.scopes?.every((scope) => scopesCodeCatalyst.includes(scope))
+            profile.scopes?.every((scope) => codeCatalystScopes.includes(scope))
 
         const tokenIdentifier = shouldUseSoftwareStatement ? this.detectSsoSessionNameForCodeCatalyst() : id
 
@@ -985,7 +983,7 @@ export class Auth implements AuthService, ConnectionManager {
         if (!isAmazonQ() && getCodeCatalystDevEnvId() !== undefined) {
             const connections = await this.listConnections()
             const shouldInsertDevEnvCredential = !connections.some(
-                (c) => c.type === 'sso' && hasScopes(c, scopesCodeCatalyst) && !hasScopes(c, scopesCodeWhispererCore)
+                (c) => c.type === 'sso' && hasScopes(c, codeCatalystScopes) && !hasScopes(c, amazonQScopes) // todo check scopes
             )
 
             if (shouldInsertDevEnvCredential) {

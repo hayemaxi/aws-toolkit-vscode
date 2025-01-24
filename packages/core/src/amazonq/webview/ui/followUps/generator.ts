@@ -7,30 +7,18 @@ import { MynahIcons } from '@aws/mynah-ui'
 import { TabType } from '../storages/tabsStorage'
 import { FollowUpsBlock } from './model'
 
-export type AuthFollowUpType = 'full-auth' | 're-auth' | 'missing_scopes' | 'use-supported-auth'
+export type AuthFollowUpType = 'full-auth' | 're-auth'
 
 export class FollowUpGenerator {
     public generateAuthFollowUps(tabType: TabType, authType: AuthFollowUpType): FollowUpsBlock {
-        let pillText
-        switch (authType) {
-            case 'full-auth':
-                pillText = 'Authenticate'
-                break
-            case 'use-supported-auth':
-            case 'missing_scopes':
-                pillText = 'Enable Amazon Q'
-                break
-            case 're-auth':
-                pillText = 'Re-authenticate'
-                break
-        }
+        const pillText = authType === 'full-auth' ? 'Authenticate' : 'Re-authenticate'
         switch (tabType) {
             default:
                 return {
                     text: '',
                     options: [
                         {
-                            pillText: pillText,
+                            pillText,
                             type: authType,
                             status: 'info',
                             icon: 'refresh' as MynahIcons,

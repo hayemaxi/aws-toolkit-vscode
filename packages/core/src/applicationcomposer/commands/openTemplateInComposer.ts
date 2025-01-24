@@ -21,8 +21,8 @@ export const openTemplateInComposerCommand = Commands.declare(
 
             let hasChatAuth = false
             if (amazonqApi) {
-                const authState = await amazonqApi.authApi.getChatAuthState()
-                hasChatAuth = authState.codewhispererChat === 'connected' || authState.codewhispererChat === 'expired'
+                const authState = await amazonqApi.authApi.getAuthState()
+                hasChatAuth = authState === 'connected' || authState === 'expired'
             }
 
             span.record({

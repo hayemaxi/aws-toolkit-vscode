@@ -12,6 +12,7 @@ import { isAutomation } from '../shared/vscode/env'
 import { AuthFormId } from '../login/webview/vue/types'
 import { getLogger } from '../shared/logger/logger'
 import { ToolkitError } from '../shared/errors'
+import { SsoScope, isScope } from '../auth/scopes'
 
 const logger = getLogger('notifications')
 /**
@@ -158,6 +159,12 @@ export class RuleEngine {
             case 'AuthState':
                 return hasAnyOfExpected(this.context.authStates)
             case 'AuthScopes':
+                for (const s of expected.filter(isScope)) {
+                    logger.error(
+                        "AuthScopes criteria scope: '%s' is not a recognized SSO scope. Condition will never match.",
+                        s
+                    )
+                }
                 return isEqualSetToExpected(this.context.authScopes)
             case 'ActiveExtensions':
                 return isSuperSetOfExpected(this.context.activeExtensions)
@@ -192,7 +199,7 @@ export async function getRuleContext(context: vscode.ExtensionContext, authState
         os: getOperatingSystem(),
         computeEnv: await getComputeEnvType(),
         authTypes: [...new Set(authTypes)],
-        authScopes: authState.authScopes ? authState.authScopes?.split(',') : [],
+        authScopes: (authState.authScopes ? authState.authScopes?.split(',') : []) as SsoScope[],
         activeExtensions: vscode.extensions.all.filter((e) => e.isActive).map((e) => e.id),
 
         // Toolkit (and eventually Q?) may have multiple connections with different regions and states.

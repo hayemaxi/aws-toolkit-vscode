@@ -28,6 +28,7 @@ import * as fs from 'fs' // eslint-disable-line no-restricted-imports
 import * as path from 'path'
 import { Stub, stub } from '../../utilities/stubber'
 import { globals } from '../../../shared'
+import { SsoScope } from '../../../auth/scopes'
 
 const hourInMs = 3600000
 
@@ -354,7 +355,7 @@ describe('SsoAccessTokenProvider', function () {
          * Saves an expired client registration to the cache.
          */
         async function saveExpiredRegistrationToCache(): Promise<{
-            key: { startUrl: string; region: string; scopes: string[] }
+            key: { startUrl: string; region: string; scopes: SsoScope[] }
             registration: ClientRegistration
         }> {
             const key = { startUrl, region, scopes: [] }

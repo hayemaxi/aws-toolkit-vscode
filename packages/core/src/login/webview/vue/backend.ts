@@ -12,16 +12,7 @@ import { CancellationError } from '../../../shared/utilities/timeoutUtils'
 import { trustedDomainCancellation } from '../../../auth/sso/model'
 import { handleWebviewError } from '../../../webviews/server'
 import { InvalidGrantException } from '@aws-sdk/client-sso-oidc'
-import {
-    AwsConnection,
-    Connection,
-    hasScopes,
-    scopesCodeCatalyst,
-    scopesCodeWhispererChat,
-    scopesSsoAccountAccess,
-    SsoConnection,
-    TelemetryMetadata,
-} from '../../../auth/connection'
+import { AwsConnection, Connection, hasScopes, SsoConnection, TelemetryMetadata } from '../../../auth/connection'
 import { Auth } from '../../../auth/auth'
 import { StaticProfile, StaticProfileKeyErrorMessage } from '../../../auth/credentials/types'
 import { telemetry } from '../../../shared/telemetry'
@@ -32,6 +23,7 @@ import { DevSettings } from '../../../shared/settings'
 import { AuthSSOServer } from '../../../auth/sso/server'
 import { getLogger } from '../../../shared/logger/logger'
 import { isValidUrl } from '../../../shared/utilities/uriUtils'
+import { amazonQScopes, codeCatalystScopes, explorerScopes } from '../../../auth/scopes'
 
 export abstract class CommonAuthWebview extends VueWebview {
     private readonly className = 'CommonAuthWebview'
@@ -257,13 +249,13 @@ export abstract class CommonAuthWebview extends VueWebview {
      */
     getAuthEnabledFeatures(conn: SsoConnection | AwsConnection) {
         const authEnabledFeatures: AuthEnabledFeatures[] = []
-        if (hasScopes(conn.scopes!, scopesCodeWhispererChat)) {
+        if (hasScopes(conn.scopes!, amazonQScopes)) {
             authEnabledFeatures.push('codewhisperer')
         }
-        if (hasScopes(conn.scopes!, scopesCodeCatalyst)) {
+        if (hasScopes(conn.scopes!, codeCatalystScopes)) {
             authEnabledFeatures.push('codecatalyst')
         }
-        if (hasScopes(conn.scopes!, scopesSsoAccountAccess)) {
+        if (hasScopes(conn.scopes!, explorerScopes)) {
             authEnabledFeatures.push('awsExplorer')
         }
 

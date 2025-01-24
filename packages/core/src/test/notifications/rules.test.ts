@@ -8,11 +8,11 @@ import assert from 'assert'
 import { RuleEngine, getRuleContext } from '../../notifications/rules'
 import { DisplayIf, ToolkitNotification, RuleContext } from '../../notifications/types'
 import globals from '../../shared/extensionGlobals'
-import { Connection, scopesCodeCatalyst } from '../../auth/connection'
+import { Connection } from '../../auth/connection'
 import { getOperatingSystem } from '../../shared/telemetry/util'
 import { getAuthFormIdsFromConnection } from '../../auth/utils'
-import { amazonQScopes } from '../../codewhisperer'
 import { builderIdStartUrl } from '../../auth/sso/constants'
+import { amazonQScopes, codeCatalystScopes } from '../../auth/scopes'
 
 describe('Notifications Rule Engine', function () {
     const context: RuleContext = {
@@ -520,7 +520,7 @@ describe('Notifications getRuleContext()', function () {
                 },
                 {
                     type: 'sso',
-                    scopes: scopesCodeCatalyst,
+                    scopes: codeCatalystScopes,
                     startUrl: builderIdStartUrl,
                 },
                 {

@@ -12,9 +12,8 @@ export async function initMessageHandler(context: WebviewContext) {
     const amazonqApi = await getAmazonqApi()
     let isConnectedToCodeWhisperer = false
     if (amazonqApi) {
-        const authState = await amazonqApi.authApi.getChatAuthState()
-        isConnectedToCodeWhisperer =
-            authState.codewhispererChat === 'connected' || authState.codewhispererChat === 'expired'
+        const authState = await amazonqApi.authApi.getAuthState()
+        isConnectedToCodeWhisperer = authState === 'connected' || authState === 'expired'
     }
 
     const responseMessage: InitResponseMessage = {

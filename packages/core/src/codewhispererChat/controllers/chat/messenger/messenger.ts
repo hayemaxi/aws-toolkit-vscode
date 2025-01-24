@@ -27,7 +27,7 @@ import { ChatPromptCommandType, TriggerPayload } from '../model'
 import { getHttpStatusCode, getRequestId, ToolkitError } from '../../../../shared/errors'
 import { keys } from '../../../../shared/utilities/tsUtils'
 import { getLogger } from '../../../../shared/logger/logger'
-import { FeatureAuthState } from '../../../../codewhisperer/util/authUtil'
+import { AuthState } from '../../../../codewhisperer/util/authUtil'
 import { CodeScanIssue } from '../../../../codewhisperer/models/model'
 import { marked } from 'marked'
 import { JSDOM } from 'jsdom'
@@ -49,7 +49,7 @@ export class Messenger {
         private readonly telemetryHelper: CWCTelemetryHelper
     ) {}
 
-    public async sendAuthNeededExceptionMessage(credentialState: FeatureAuthState, tabID: string, triggerID: string) {
+    public async sendAuthNeededExceptionMessage(credentialState: AuthState, tabID: string, triggerID: string) {
         const { message, authType } = extractAuthFollowUp(credentialState)
         this.dispatcher.sendAuthNeededExceptionMessage(
             new AuthNeededException(

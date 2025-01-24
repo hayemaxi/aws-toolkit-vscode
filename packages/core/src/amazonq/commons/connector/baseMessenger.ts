@@ -5,7 +5,7 @@
 
 import { ChatItemAction, ProgressField } from '@aws/mynah-ui'
 import { AuthFollowUpType, AuthMessageDataMap } from '../../../amazonq/auth/model'
-import { FeatureAuthState } from '../../../codewhisperer'
+import { AuthState } from '../../../codewhisperer'
 import { i18n } from '../../../shared/i18n-helper'
 import { CodeReference } from '../../../amazonq/webview/ui/connector'
 
@@ -192,17 +192,13 @@ export class Messenger {
         )
     }
 
-    public async sendAuthNeededExceptionMessage(credentialState: FeatureAuthState, tabID: string) {
+    public async sendAuthNeededExceptionMessage(credentialState: AuthState, tabID: string) {
         let authType: AuthFollowUpType = 'full-auth'
         let message = AuthMessageDataMap[authType].message
 
-        switch (credentialState.amazonQ) {
+        switch (credentialState) {
             case 'disconnected':
                 authType = 'full-auth'
-                message = AuthMessageDataMap[authType].message
-                break
-            case 'unsupported':
-                authType = 'use-supported-auth'
                 message = AuthMessageDataMap[authType].message
                 break
             case 'expired':

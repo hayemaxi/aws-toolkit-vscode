@@ -15,9 +15,10 @@ import {
 import { Auth } from '../../../../auth'
 import { AmazonQLoginWebview } from '../../../../login/webview/vue/amazonq/backend_amazonq'
 import { isBuilderIdConnection, isIdcSsoConnection } from '../../../../auth/connection'
-import { amazonQScopes, AuthUtil } from '../../../../codewhisperer/util/authUtil'
+import { AuthUtil } from '../../../../codewhisperer/util/authUtil'
 import { getOpenExternalStub } from '../../../globalSetup.test'
 import globals from '../../../../shared/extensionGlobals'
+import { amazonQScopes } from '../../../../auth/scopes'
 
 // TODO: remove auth page and tests
 describe('Amazon Q Login', function () {

@@ -15,7 +15,7 @@ import { InstalledClock } from '@sinonjs/fake-timers'
 import globals from '../../../shared/extensionGlobals'
 import { focusAmazonQPanel } from '../../../codewhispererChat/commands/registerCommands'
 import sinon from 'sinon'
-import { AuthState, AuthStates, AuthUtil, FeatureAuthState } from '../../../codewhisperer/util/authUtil'
+import { AuthState, AuthStates, AuthUtil } from '../../../codewhisperer/util/authUtil'
 import { inlinehintKey } from '../../../codewhisperer/models/constants'
 import {
     AutotriggerState,
@@ -58,7 +58,7 @@ describe('TryChatCodeLensProvider', () => {
     })
 
     function stubConnection(state: AuthState) {
-        return sinon.stub(AuthUtil.instance, 'getChatAuthStateSync').returns({ amazonQ: state } as FeatureAuthState)
+        return sinon.stub(AuthUtil.instance, 'getChatAuthStateSync').returns(state)
     }
 
     it('keeps returning a code lense until it hits the max times it should show', async function () {

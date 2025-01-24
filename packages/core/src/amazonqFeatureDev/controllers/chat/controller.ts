@@ -371,7 +371,7 @@ export class FeatureDevController {
             session = await this.sessionStorage.getSession(message.tabID)
             await session.disableFileList()
             const authState = await AuthUtil.instance.getChatAuthState()
-            if (authState.amazonQ !== 'connected') {
+            if (authState !== 'connected') {
                 await this.messenger.sendAuthNeededExceptionMessage(authState, message.tabID)
                 session.isAuthenticating = true
                 return
@@ -898,7 +898,7 @@ export class FeatureDevController {
             getLogger().debug(`${featureName}: Session created with id: ${session.tabID}`)
 
             const authState = await AuthUtil.instance.getChatAuthState()
-            if (authState.amazonQ !== 'connected') {
+            if (authState !== 'connected') {
                 void this.messenger.sendAuthNeededExceptionMessage(authState, message.tabID)
                 session.isAuthenticating = true
                 return

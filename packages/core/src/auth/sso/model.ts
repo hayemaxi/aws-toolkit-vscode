@@ -16,6 +16,7 @@ import { ssoAuthHelpUrl } from '../../shared/constants'
 import { openUrl } from '../../shared/utilities/vsCodeUtils'
 import { ToolkitError } from '../../shared/errors'
 import { builderIdStartUrl } from './constants'
+import { SsoScope } from '../scopes'
 
 export interface SsoToken {
     /**
@@ -71,7 +72,7 @@ export interface ClientRegistration {
     /**
      * Scope of the client registration. Applies to all tokens created using this registration.
      */
-    readonly scopes?: string[]
+    readonly scopes?: SsoScope[]
 
     /**
      * The sso flow used to create this registration.
@@ -84,7 +85,7 @@ export interface SsoProfile {
     readonly startUrl: string
     readonly accountId?: string
     readonly roleName?: string
-    readonly scopes?: string[]
+    readonly scopes?: SsoScope[]
     readonly identifier?: string
 }
 

@@ -36,6 +36,7 @@ import { StandardRetryStrategy, defaultRetryDecider } from '@smithy/middleware-r
 import { AuthenticationFlow } from './model'
 import { toSnakeCase } from '../../shared/utilities/textUtilities'
 import { getUserAgent, withTelemetryContext } from '../../shared/telemetry/util'
+import { SsoScope } from '../scopes'
 
 export class OidcClient {
     public constructor(
@@ -43,8 +44,12 @@ export class OidcClient {
         private readonly clock: { Date: typeof Date }
     ) {}
 
-    public async registerClient(request: RegisterClientRequest, startUrl: string, flow?: AuthenticationFlow) {
-        const response = await this.client.registerClient(request)
+    public async registerClient(
+        request: Omit<RegisterClientRequest, 'scopes'> & { scopes?: SsoScope[] },
+        startUrl: string,
+        flow?: AuthenticationFlow
+    ) {
+        const response = await this.client.registerClient(request as RegisterClientRequest)
         assertHasProps(response, 'clientId', 'clientSecret', 'clientSecretExpiresAt')
 
         return {
@@ -72,7 +77,7 @@ export class OidcClient {
         responseType: string
         clientId: string
         redirectUri: string
-        scopes: string[]
+        scopes: SsoScope[]
         state: string
         codeChallenge: string
         codeChallengeMethod: string

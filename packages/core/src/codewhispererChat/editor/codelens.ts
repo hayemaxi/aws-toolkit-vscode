@@ -89,7 +89,7 @@ export class TryChatCodeLensProvider implements vscode.CodeLensProvider {
                 return resolve([])
             }
 
-            if (AuthUtil.instance.getChatAuthStateSync().amazonQ !== AuthStates.connected) {
+            if (AuthUtil.instance.getChatAuthStateSync() !== AuthStates.connected) {
                 return resolve([])
             }
 

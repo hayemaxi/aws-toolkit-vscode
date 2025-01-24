@@ -10,6 +10,7 @@ import { Connection, createSsoProfile, hasScopes, isSsoConnection } from '../../
 import assert from 'assert'
 import globals from '../../shared/extensionGlobals'
 import { waitUntil } from '../../shared/utilities/timeoutUtils'
+import { SsoScope } from '../../auth/scopes'
 
 describe('SecondaryAuth', function () {
     let auth: ReturnType<typeof createTestAuth>
@@ -17,7 +18,7 @@ describe('SecondaryAuth', function () {
     let isValid: (conn: Connection) => conn is Connection
     let sandbox: SinonSandbox
     let conn: Connection
-    const scopes = ['test:scope']
+    const scopes = ['test:scope'] as unknown as SsoScope[]
 
     let onDidChangeActiveConnection: SinonStub
 

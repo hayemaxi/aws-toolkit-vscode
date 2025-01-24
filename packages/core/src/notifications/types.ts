@@ -8,6 +8,7 @@ import { EnvType, OperatingSystem } from '../shared/telemetry/util'
 import { TypeConstructor } from '../shared/utilities/typeConstructors'
 import { AuthUserState, AuthStatus } from '../shared/telemetry/telemetry.gen'
 import { AuthType } from '../auth/connection'
+import { SsoScope } from '../auth/scopes'
 
 /** Types of information that we can use to determine whether to show a notification or not. */
 
@@ -38,7 +39,7 @@ type AuthStateCriteria = {
 
 type AuthScopesCriteria = {
     type: 'AuthScopes'
-    values: string[] // TODO: Scopes should be typed. Could import here, but don't want to import too much.
+    values: SsoScope[]
 }
 
 type ActiveExtensionsCriteria = {
@@ -172,7 +173,7 @@ export interface RuleContext {
     readonly authTypes: AuthType[]
     readonly authRegions: string[]
     readonly authStates: AuthStatus[]
-    readonly authScopes: string[]
+    readonly authScopes: SsoScope[]
     readonly activeExtensions: string[]
 }
 

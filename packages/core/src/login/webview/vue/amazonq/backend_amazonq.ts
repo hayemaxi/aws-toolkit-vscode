@@ -152,8 +152,8 @@ export class AmazonQLoginWebview extends CommonAuthWebview {
     isReauthenticating: boolean = false
     private authState: AuthFlowState = 'LOGIN'
     override async refreshAuthState(): Promise<void> {
-        const featureAuthStates = await AuthUtil.instance.getChatAuthState()
-        if (featureAuthStates.amazonQ === 'expired') {
+        const authState = await AuthUtil.instance.getChatAuthState()
+        if (authState === 'expired') {
             this.authState = this.isReauthenticating ? 'REAUTHENTICATING' : 'REAUTHNEEDED'
             return
         }

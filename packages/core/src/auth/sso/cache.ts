@@ -16,11 +16,12 @@ import { DevSettings } from '../../shared/settings'
 import { onceChanged } from '../../shared/utilities/functionUtils'
 import globals from '../../shared/extensionGlobals'
 import { ToolkitError } from '../../shared/errors'
+import { SsoScope } from '../scopes'
 
 interface RegistrationKey {
     readonly startUrl: string
     readonly region: string
-    readonly scopes?: string[]
+    readonly scopes?: SsoScope[]
 }
 
 export interface SsoAccess {
@@ -146,7 +147,7 @@ function getTokenCacheFile(ssoCacheDir: string, key: string): string {
 }
 
 function getRegistrationCacheFile(ssoCacheDir: string, key: RegistrationKey): string {
-    const hash = (startUrl: string, scopes: string[]) => {
+    const hash = (startUrl: string, scopes: SsoScope[]) => {
         const shasum = crypto.createHash('sha256')
         shasum.update(startUrl)
         for (const s of scopes) {

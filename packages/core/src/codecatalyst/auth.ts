@@ -14,8 +14,6 @@ import { ToolkitError, isAwsError } from '../shared/errors'
 import { MetricName, MetricShapes, telemetry } from '../shared/telemetry/telemetry'
 import { openUrl } from '../shared/utilities/vsCodeUtils'
 import {
-    scopesSsoAccountAccess,
-    scopesCodeCatalyst,
     SsoConnection,
     Connection,
     isBuilderIdConnection,
@@ -31,6 +29,7 @@ import { ToolkitPromptSettings } from '../shared/settings'
 import { setContext } from '../shared/vscode/setContext'
 import { withTelemetryContext } from '../shared/telemetry/util'
 import { builderIdStartUrl } from '../auth/sso/constants'
+import { codeCatalystScopes } from '../auth/scopes'
 
 // Secrets stored on the macOS keychain appear as individual entries for each key
 // This is fine so long as the user has only a few accounts. Otherwise this should
@@ -48,11 +47,6 @@ export class CodeCatalystAuthStorage {
 }
 
 export const onboardingUrl = vscode.Uri.parse('https://codecatalyst.aws/onboarding/view')
-
-/**
- * AWS account scopes are intended to be included. Some codepaths that use defaultScopes may depend on these scopes.
- */
-export const defaultScopes = [...scopesSsoAccountAccess, ...scopesCodeCatalyst]
 
 export const isUpgradeableConnection = (conn: Connection): conn is SsoConnection =>
     isSsoConnection(conn) && !isValidCodeCatalystConnection(conn)
@@ -226,7 +220,7 @@ export class CodeCatalystAuthenticationProvider {
                 codecatalyst_connectionFlow: 'Create',
             } satisfies ConnectionFlowEvent as MetricShapes[MetricName])
 
-            const newConn = await createBuilderIdConnection(this.auth, defaultScopes)
+            const newConn = await createBuilderIdConnection(this.auth, codeCatalystScopes)
             if (this.auth.activeConnection?.id !== newConn.id) {
                 await this.secondaryAuth.useNewConnection(newConn)
             }
@@ -239,7 +233,7 @@ export class CodeCatalystAuthenticationProvider {
                 codecatalyst_connectionFlow: 'Upgrade',
             } satisfies ConnectionFlowEvent as MetricShapes[MetricName])
 
-            return this.secondaryAuth.addScopes(conn, defaultScopes)
+            return this.secondaryAuth.addScopes(conn, codeCatalystScopes)
         }
 
         if (this.auth.activeConnection?.id !== conn.id) {
@@ -310,9 +304,9 @@ export class CodeCatalystAuthenticationProvider {
             )
 
             if (!conn) {
-                conn = await this.auth.createConnection(createSsoProfile(startUrl, region, defaultScopes))
+                conn = await this.auth.createConnection(createSsoProfile(startUrl, region, codeCatalystScopes))
             } else if (!isValidCodeCatalystConnection(conn)) {
-                conn = await this.secondaryAuth.addScopes(conn, defaultScopes)
+                conn = await this.secondaryAuth.addScopes(conn, codeCatalystScopes)
             }
 
             if (this.auth.getConnectionState(conn) === 'invalid') {
@@ -352,8 +346,8 @@ export class CodeCatalystAuthenticationProvider {
         try {
             let connToReauth = conn
             // Sanity check - connections with other scopes should have been forced out at this point.
-            if (!hasExactScopes(conn, defaultScopes)) {
-                const newConn = await setScopes(conn, defaultScopes)
+            if (!hasExactScopes(conn, codeCatalystScopes)) {
+                const newConn = await setScopes(conn, codeCatalystScopes)
                 connToReauth = await this.secondaryAuth.useNewConnection(newConn)
             }
 

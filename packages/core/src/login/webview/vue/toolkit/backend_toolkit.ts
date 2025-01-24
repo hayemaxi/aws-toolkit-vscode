@@ -21,6 +21,7 @@ import { CodeCatalystAuthenticationProvider } from '../../../../codecatalyst/aut
 import { AuthError, AuthFlowState } from '../types'
 import { setContext } from '../../../../shared'
 import { builderIdStartUrl } from '../../../../auth/sso/constants'
+import { explorerScopes } from '../../../../auth/scopes'
 
 export class ToolkitLoginWebview extends CommonAuthWebview {
     public override id: string = 'aws.toolkit.AmazonCommonAuth'
@@ -63,7 +64,7 @@ export class ToolkitLoginWebview extends CommonAuthWebview {
         return this.ssoSetup('createIdentityCenterConnection', async () => {
             this.storeMetricMetadata({ ...metadata })
 
-            const ssoProfile = createSsoProfile(startUrl, region)
+            const ssoProfile = createSsoProfile(startUrl, region, explorerScopes)
             const conn = await Auth.instance.createConnection(ssoProfile)
             await Auth.instance.useConnection(conn)
 
