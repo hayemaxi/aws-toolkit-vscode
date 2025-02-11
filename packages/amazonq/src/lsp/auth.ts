@@ -10,12 +10,10 @@ import {
     ResponseMessage,
 } from '@aws/language-server-runtimes/protocol'
 import * as jose from 'jose'
-import * as crypto from 'crypto'
 import { LanguageClient } from 'vscode-languageclient'
 import { AuthUtil } from 'aws-core-vscode/codewhisperer'
 import { Writable } from 'stream'
-
-export const encryptionKey = crypto.randomBytes(32)
+import { Auth2 } from 'aws-core-vscode/auth'
 
 /**
  * Sends a json payload to the language server, who is waiting to know what the encryption key is.
@@ -25,7 +23,7 @@ export function writeEncryptionInit(stream: Writable): void {
     const request = {
         version: '1.0',
         mode: 'JWT',
-        key: encryptionKey.toString('base64'),
+        key: Auth2.encryptionKey.toString('base64'),
     }
     stream.write(JSON.stringify(request))
     stream.write('\n')
@@ -88,7 +86,7 @@ export class AmazonQLspAuth {
 
         const jwt = await new jose.CompactEncrypt(payload)
             .setProtectedHeader({ alg: 'dir', enc: 'A256GCM' })
-            .encrypt(encryptionKey)
+            .encrypt(Auth2.encryptionKey)
 
         return {
             data: jwt,

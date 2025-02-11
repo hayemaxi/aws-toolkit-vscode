@@ -4,7 +4,12 @@
  */
 
 import { AuthUtils, CredentialsStore, LoginManager, initializeAuth } from 'aws-core-vscode/auth'
-import { activate as activateCodeWhisperer, shutdown as shutdownCodeWhisperer } from 'aws-core-vscode/codewhisperer'
+import {
+    AuthUtil,
+    activate as activateCodeWhisperer,
+    shutdown as shutdownCodeWhisperer,
+    postInit,
+} from 'aws-core-vscode/codewhisperer'
 import { makeEndpointsProvider, registerGenericCommands } from 'aws-core-vscode'
 import { CommonAuthWebview } from 'aws-core-vscode/login'
 import {
@@ -117,10 +122,16 @@ export async function activateAmazonQCommon(context: vscode.ExtensionContext, is
         extensionContext: context,
     }
     // This contains every lsp agnostic things (auth, security scan, code scan)
-    await activateCodeWhisperer(extContext as ExtContext)
+    // await activateCodeWhisperer(extContext as ExtContext)
     if (Experiments.instance.get('amazonqLSP', false)) {
+        await activateCodeWhisperer(extContext as ExtContext)
         await activateAmazonqLsp(context)
+        AuthUtil.instance.initCodeWhispererHooks()
+        await postInit(extContext as ExtContext)
     } else {
+        await activateCodeWhisperer(extContext as ExtContext)
+        AuthUtil.instance.initCodeWhispererHooks()
+        await postInit(extContext as ExtContext)
         await activateInlineCompletion()
     }
 

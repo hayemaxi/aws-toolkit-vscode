@@ -65,8 +65,8 @@ export class AmazonQLoginWebview extends CommonAuthWebview {
                 isReAuth: false,
             })
 
-            const conn = await awsIdSignIn()
-            this.storeMetricMetadata(await getTelemetryMetadataForConn(conn))
+            await awsIdSignIn()
+            // this.storeMetricMetadata(await getTelemetryMetadataForConn(conn))
 
             void vscode.window.showInformationMessage('AmazonQ: Successfully connected to AWS Builder ID')
         })
@@ -82,8 +82,8 @@ export class AmazonQLoginWebview extends CommonAuthWebview {
                 isReAuth: false,
             })
 
-            const conn = await connectToEnterpriseSso(startUrl, region)
-            this.storeMetricMetadata(await getTelemetryMetadataForConn(conn))
+            await connectToEnterpriseSso(startUrl, region)
+            // this.storeMetricMetadata(await getTelemetryMetadataForConn(conn))
 
             void vscode.window.showInformationMessage('AmazonQ: Successfully connected to AWS IAM Identity Center')
         })

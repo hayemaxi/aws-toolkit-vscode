@@ -8,20 +8,34 @@ import * as nls from 'vscode-nls'
 import * as crypto from 'crypto'
 import { LanguageClient, LanguageClientOptions } from 'vscode-languageclient'
 import { registerInlineCompletion } from '../app/inline/completion'
-import { AmazonQLspAuth, encryptionKey, notificationTypes } from './auth'
+import { notificationTypes } from './auth'
 import { AuthUtil } from 'aws-core-vscode/codewhisperer'
-import { ConnectionMetadata } from '@aws/language-server-runtimes/protocol'
-import { ResourcePaths, Settings, oidcClientName, createServerOptions, globals } from 'aws-core-vscode/shared'
+import {
+    ResourcePaths,
+    Settings,
+    createServerOptions,
+    oidcClientName,
+    globals,
+    getLogger,
+    openUrl,
+} from 'aws-core-vscode/shared'
+import {
+    ConnectionMetadata,
+    ShowDocumentParams,
+    ShowDocumentRequest,
+    ShowDocumentResult,
+} from '@aws/language-server-runtimes/protocol'
+import { Auth2, SsoConnection, getRegistrationCacheFile, getTokenCacheFile, getCacheDir } from 'aws-core-vscode/auth'
 
 const localize = nls.loadMessageBundle()
 
-export async function startLanguageServer(extensionContext: vscode.ExtensionContext, resourcePaths: ResourcePaths) {
+export function startLanguageServer(extensionContext: vscode.ExtensionContext, resourcePaths: ResourcePaths) {
     const toDispose = extensionContext.subscriptions
 
     const serverModule = resourcePaths.lsp
 
     const serverOptions = createServerOptions({
-        encryptionKey,
+        encryptionKey: Auth2.encryptionKey,
         executable: resourcePaths.node,
         serverModule,
         execArgv: [
@@ -75,20 +89,13 @@ export async function startLanguageServer(extensionContext: vscode.ExtensionCont
               }),
     }
 
-    const client = new LanguageClient(
-        clientId,
-        localize('amazonq.server.name', 'Amazon Q Language Server'),
-        serverOptions,
-        clientOptions
-    )
+    const lspName = localize('amazonq.server.name', 'Amazon Q Language Server')
+    const client = new LanguageClient(clientId, lspName, serverOptions, clientOptions)
 
     const disposable = client.start()
     toDispose.push(disposable)
 
-    const auth = new AmazonQLspAuth(client)
-
     return client.onReady().then(async () => {
-        await auth.init()
         registerInlineCompletion(client)
 
         // Request handler for when the server wants to know about the clients auth connnection
@@ -100,13 +107,37 @@ export async function startLanguageServer(extensionContext: vscode.ExtensionCont
             }
         })
 
-        toDispose.push(
-            AuthUtil.instance.auth.onDidChangeActiveConnection(async () => {
-                await auth.init()
-            }),
-            AuthUtil.instance.auth.onDidDeleteConnection(async () => {
-                client.sendNotification(notificationTypes.deleteBearerToken.method)
-            })
-        )
+        client.onRequest<ShowDocumentResult, Error>(ShowDocumentRequest.method, async (params: ShowDocumentParams) => {
+            try {
+                return { success: await openUrl(vscode.Uri.parse(params.uri), lspName) }
+            } catch (err: any) {
+                getLogger().error(`Failed to open document for LSP: ${lspName}, error: %s`, err)
+                return { success: false }
+            }
+        })
+
+        // toDispose.push(
+        //     AuthUtil.instance.auth.onDidChangeActiveConnection(async () => {
+        //         await auth.init()
+        //     }),
+        //     AuthUtil.instance.auth.onDidDeleteConnection(async () => {
+        //         client.sendNotification(notificationTypes.deleteBearerToken.method)
+        //     })
+        // )
+        Auth2.create(client)
+        const conn = (AuthUtil.instance.conn as SsoConnection) ?? AuthUtil.instance.auth.activeConnection
+        if (conn) {
+            await Auth2.instance.importOldSsoSession(
+                conn.startUrl,
+                conn.ssoRegion,
+                getRegistrationCacheFile(getCacheDir(), {
+                    startUrl: conn.startUrl,
+                    region: conn.ssoRegion,
+                    scopes: conn.scopes,
+                }),
+                getTokenCacheFile(getCacheDir(), (conn.id ?? conn.startUrl) as any)
+            )
+            await AuthUtil.instance.secondaryAuth.deleteConnection()
+        }
     })
 }

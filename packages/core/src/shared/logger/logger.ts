@@ -16,6 +16,7 @@ export type LogTopic =
     | 'amazonqLsp'
     | 'chat'
     | 'stepfunctions'
+    | 'auth2'
     | 'unknown'
 
 class ErrorLog {

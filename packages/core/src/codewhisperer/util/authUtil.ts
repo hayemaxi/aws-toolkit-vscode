@@ -6,7 +6,7 @@
 import * as vscode from 'vscode'
 import * as localizedText from '../../shared/localizedText'
 import { Auth } from '../../auth/auth'
-import { ToolkitError, isNetworkError, tryRun } from '../../shared/errors'
+import { ToolkitError } from '../../shared/errors'
 import { getSecondaryAuth, setScopes } from '../../auth/secondaryAuth'
 import { isSageMaker } from '../../shared/extensionUtilities'
 import { AmazonQPromptSettings } from '../../shared/settings'
@@ -23,7 +23,6 @@ import {
     scopesCodeWhispererChat,
     scopesFeatureDev,
     scopesGumby,
-    isIdcSsoConnection,
     hasExactScopes,
     getTelemetryMetadataForConn,
     ProfileNotFoundError,
@@ -32,7 +31,6 @@ import { getLogger } from '../../shared/logger/logger'
 import { Commands, placeholder } from '../../shared/vscode/commands2'
 import { vsCodeState } from '../models/model'
 import { onceChanged, once } from '../../shared/utilities/functionUtils'
-import { indent } from '../../shared/utilities/textUtilities'
 import { showReauthenticateMessage } from '../../shared/utilities/messages'
 import { showAmazonQWalkthroughOnce } from '../../amazonq/onboardingPage/walkthrough'
 import { setContext } from '../../shared/vscode/setContext'
@@ -45,6 +43,8 @@ import { asStringifiedStack } from '../../shared/telemetry/spans'
 import { withTelemetryContext } from '../../shared/telemetry/util'
 import { focusAmazonQPanel } from '../../codewhispererChat/commands/registerCommands'
 import { throttle } from 'lodash'
+import { Auth2 } from '../../auth/auth2'
+import { builderIdStartUrl } from '../../auth/sso/constants'
 
 /** Backwards compatibility for connections w pre-chat scopes */
 export const codeWhispererCoreScopes = [...scopesCodeWhispererCore]
@@ -108,17 +108,18 @@ export class AuthUtil {
     public constructor(public readonly auth = Auth.instance) {}
 
     public initCodeWhispererHooks = once(() => {
-        this.auth.onDidChangeConnectionState(async (e) => {
-            getLogger().info(`codewhisperer: connection changed to ${e.state}: ${e.id}`)
-            if (e.state !== 'authenticating') {
-                await this.refreshCodeWhisperer()
-            }
+        // this.auth.onDidChangeConnectionState(async (e) => {
+        //     getLogger().info(`codewhisperer: connection changed to ${e.state}: ${e.id}`)
+        //     if (e.state !== 'authenticating') {
+        //         await this.refreshCodeWhisperer()
+        //     }
 
-            await this.setVscodeContextProps()
-        })
+        //     await this.setVscodeContextProps()
+        // })
 
-        this.secondaryAuth.onDidChangeActiveConnection(async () => {
-            getLogger().info(`codewhisperer: active connection changed`)
+        Auth2.instance.onDidChangeConnectionState(async (state) => {
+            getLogger().info(`codewhisperer: connection changed to ${state}`)
+            await this.refreshCodeWhisperer()
             if (this.isValidEnterpriseSsoInUse()) {
                 void vscode.commands.executeCommand('aws.amazonq.notifyNewCustomizations')
             }
@@ -136,6 +137,26 @@ export class AuthUtil {
                 await showAmazonQWalkthroughOnce()
             }
         })
+
+        // this.secondaryAuth.onDidChangeActiveConnection(async () => {
+        //     getLogger().info(`codewhisperer: active connection changed`)
+        //     if (this.isValidEnterpriseSsoInUse()) {
+        //         void vscode.commands.executeCommand('aws.amazonq.notifyNewCustomizations')
+        //     }
+        //     vsCodeState.isFreeTierLimitReached = false
+        //     await Promise.all([
+        //         // onDidChangeActiveConnection may trigger before these modules are activated.
+        //         Commands.tryExecute('aws.amazonq.refreshStatusBar'),
+        //         Commands.tryExecute('aws.amazonq.updateReferenceLog'),
+        //     ])
+
+        //     await this.setVscodeContextProps()
+
+        //     // To check valid connection
+        //     if (this.isValidEnterpriseSsoInUse() || (this.isBuilderIdInUse() && !this.isConnectionExpired())) {
+        //         await showAmazonQWalkthroughOnce()
+        //     }
+        // })
     })
 
     public async setVscodeContextProps() {
@@ -166,23 +187,27 @@ export class AuthUtil {
     }
 
     public isConnected(): boolean {
-        return this.conn !== undefined
+        // return this.conn !== undefined
+        return Auth2.instance.getAuthState() === 'connected'
     }
 
     public isEnterpriseSsoInUse(): boolean {
-        const conn = this.conn
-        // we have an sso that isn't builder id, must be IdC by process of elimination
-        const isUsingEnterpriseSso = conn?.type === 'sso' && !isBuilderIdConnection(conn)
-        return conn !== undefined && isUsingEnterpriseSso
+        // const conn = this.conn
+        // // we have an sso that isn't builder id, must be IdC by process of elimination
+        // const isUsingEnterpriseSso = conn?.type === 'sso' && !isBuilderIdConnection(conn)
+        // return conn !== undefined && isUsingEnterpriseSso
+        return Auth2.instance.getProfile()?.startUrl !== builderIdStartUrl
     }
 
     // If there is an active SSO connection
     public isValidEnterpriseSsoInUse(): boolean {
-        return this.isEnterpriseSsoInUse() && !this.isConnectionExpired()
+        // return this.isEnterpriseSsoInUse() && !this.isConnectionExpired()
+        return Auth2.instance.getProfile()?.startUrl !== builderIdStartUrl && !this.isConnectionExpired()
     }
 
     public isBuilderIdInUse(): boolean {
-        return this.conn !== undefined && isBuilderIdConnection(this.conn)
+        // return this.conn !== undefined && isBuilderIdConnection(this.conn)
+        return Auth2.instance.getProfile()?.startUrl === builderIdStartUrl
     }
 
     @withTelemetryContext({ name: 'connectToAwsBuilderId', class: authClassName })
@@ -235,17 +260,24 @@ export class AuthUtil {
     public async getBearerToken(): Promise<string> {
         await this.restore()
 
-        if (this.conn === undefined) {
-            throw new ToolkitError('No connection found', { code: 'NoConnection' })
-        }
+        // if (this.conn === undefined) {
+        //     throw new ToolkitError('No connection found', { code: 'NoConnection' })
+        // }
 
-        if (!isSsoConnection(this.conn)) {
-            throw new ToolkitError('Connection is not an SSO connection', { code: 'BadConnectionType' })
-        }
+        // if (!isSsoConnection(this.conn)) {
+        //     throw new ToolkitError('Connection is not an SSO connection', { code: 'BadConnectionType' })
+        // }
 
         try {
-            const bearerToken = await this.conn.getToken()
-            return bearerToken.accessToken
+            // const bearerToken = await this.conn.getToken()
+            // return bearerToken.accessToken
+
+            const token = await Auth2.instance.getToken(false)
+            if (!token) {
+                throw new ToolkitError('No connection found', { code: 'NoConnection' })
+            }
+
+            return token as unknown as string
         } catch (err) {
             if (err instanceof ProfileNotFoundError) {
                 // Expected that connection would be deleted by conn.getToken()
@@ -271,42 +303,44 @@ export class AuthUtil {
     }
 
     public isConnectionValid(log: boolean = true): boolean {
-        const connectionValid = this.conn !== undefined && !this.secondaryAuth.isConnectionExpired
+        // const connectionValid = this.conn !== undefined && !this.secondaryAuth.isConnectionExpired
 
-        if (log) {
-            this.logConnection()
-        }
+        // if (log) {
+        //     this.logConnection()
+        // }
 
-        return connectionValid
+        // return connectionValid
+        return this.isConnected()
     }
 
     public isConnectionExpired(log: boolean = true): boolean {
-        const connectionExpired =
-            this.secondaryAuth.isConnectionExpired &&
-            this.conn !== undefined &&
-            isValidCodeWhispererCoreConnection(this.conn)
+        // const connectionExpired =
+        //     this.secondaryAuth.isConnectionExpired &&
+        //     this.conn !== undefined &&
+        //     isValidCodeWhispererCoreConnection(this.conn)
 
-        if (log) {
-            this.logConnection()
-        }
+        // if (log) {
+        //     this.logConnection()
+        // }
 
-        return connectionExpired
+        // return connectionExpired
+        return Auth2.instance.getAuthState() === 'expired'
     }
 
-    private logConnection() {
-        const logStr = indent(
-            `codewhisperer: connection states
-            connection isValid=${this.isConnectionValid(false)},
-            connection isValidCodewhispererCoreConnection=${isValidCodeWhispererCoreConnection(this.conn)},
-            connection isExpired=${this.isConnectionExpired(false)},
-            secondaryAuth isExpired=${this.secondaryAuth.isConnectionExpired},
-            connection isUndefined=${this.conn === undefined}`,
-            4,
-            true
-        )
+    // private logConnection() {
+    //     const logStr = indent(
+    //         `codewhisperer: connection states
+    //         connection isValid=${this.isConnectionValid(false)},
+    //         connection isValidCodewhispererCoreConnection=${isValidCodeWhispererCoreConnection(this.conn)},
+    //         connection isExpired=${this.isConnectionExpired(false)},
+    //         secondaryAuth isExpired=${this.secondaryAuth.isConnectionExpired},
+    //         connection isUndefined=${this.conn === undefined}`,
+    //         4,
+    //         true
+    //     )
 
-        AuthUtil.logIfChanged(logStr)
-    }
+    //     AuthUtil.logIfChanged(logStr)
+    // }
 
     @withTelemetryContext({ name: 'reauthenticate', class: authClassName })
     public async reauthenticate() {
@@ -422,15 +456,15 @@ export class AuthUtil {
     public async _getChatAuthState(ignoreNetErr: boolean = true): Promise<FeatureAuthState> {
         // The state of the connection may not have been properly validated
         // and the current state we see may be stale, so refresh for latest state.
-        if (ignoreNetErr) {
-            await tryRun(
-                () => this.auth.refreshConnectionState(this.conn),
-                (err) => !isNetworkError(err),
-                'getChatAuthState: Cannot refresh connection state due to network error: %s'
-            )
-        } else {
-            await this.auth.refreshConnectionState(this.conn)
-        }
+        // if (ignoreNetErr) {
+        //     await tryRun(
+        //         () => this.auth.refreshConnectionState(this.conn),
+        //         (err) => !isNetworkError(err),
+        //         'getChatAuthState: Cannot refresh connection state due to network error: %s'
+        //     )
+        // } else {
+        //     await this.auth.refreshConnectionState(this.conn)
+        // }
 
         return this.getChatAuthStateSync(this.conn)
     }
@@ -442,33 +476,34 @@ export class AuthUtil {
      * use async method getChatAuthState()
      */
     public getChatAuthStateSync(conn = this.conn): FeatureAuthState {
-        if (conn === undefined) {
-            return buildFeatureAuthState(AuthStates.disconnected)
-        }
+        return buildFeatureAuthState(Auth2.instance.getAuthState() === 'connected' ? 'connected' : 'disconnected')
+        // if (conn === undefined) {
+        //     return buildFeatureAuthState(AuthStates.disconnected)
+        // }
 
-        if (!isSsoConnection(conn) && !isSageMaker()) {
-            throw new ToolkitError(`Connection "${conn.id}" is not a valid type: ${conn.type}`)
-        }
+        // if (!isSsoConnection(conn) && !isSageMaker()) {
+        //     throw new ToolkitError(`Connection "${conn.id}" is not a valid type: ${conn.type}`)
+        // }
 
-        // default to expired to indicate reauth is needed if unmodified
-        const state: FeatureAuthState = buildFeatureAuthState(AuthStates.expired)
+        // // default to expired to indicate reauth is needed if unmodified
+        // const state: FeatureAuthState = buildFeatureAuthState(AuthStates.expired)
 
-        if (this.isConnectionExpired()) {
-            return state
-        }
+        // if (this.isConnectionExpired()) {
+        //     return state
+        // }
 
-        if (isBuilderIdConnection(conn) || isIdcSsoConnection(conn) || isSageMaker()) {
-            if (isValidCodeWhispererCoreConnection(conn)) {
-                state[Features.codewhispererCore] = AuthStates.connected
-            }
-            if (isValidAmazonQConnection(conn)) {
-                for (const v of Object.values(Features)) {
-                    state[v as Feature] = AuthStates.connected
-                }
-            }
-        }
+        // if (isBuilderIdConnection(conn) || isIdcSsoConnection(conn) || isSageMaker()) {
+        //     if (isValidCodeWhispererCoreConnection(conn)) {
+        //         state[Features.codewhispererCore] = AuthStates.connected
+        //     }
+        //     if (isValidAmazonQConnection(conn)) {
+        //         for (const v of Object.values(Features)) {
+        //             state[v as Feature] = AuthStates.connected
+        //         }
+        //     }
+        // }
 
-        return state
+        // return state
     }
 
     /**

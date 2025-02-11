@@ -69,6 +69,7 @@ import { UserWrittenCodeTracker } from '../tracker/userWrittenCodeTracker'
 import { parsePatch } from 'diff'
 import { createCodeIssueGroupingStrategyPrompter } from '../ui/prompters'
 import { cancel, confirm } from '../../shared/localizedText'
+import { Auth2 } from '../../auth/auth2'
 
 const MessageTimeOut = 5_000
 
@@ -576,8 +577,9 @@ export const applySecurityFix = Commands.declare(
 
 export const signoutCodeWhisperer = Commands.declare(
     { id: 'aws.amazonq.signout', compositeKey: { 1: 'source' } },
-    (auth: AuthUtil) => async (_: VsCodeCommandArg, source: CodeWhispererSource) => {
-        await auth.secondaryAuth.deleteConnection()
+    () => async (_: VsCodeCommandArg, source: CodeWhispererSource) => {
+        // await auth.secondaryAuth.deleteConnection()
+        await Auth2.instance.logout()
         SecurityIssueTreeViewProvider.instance.refresh()
         return focusAmazonQPanel.execute(placeholder, source)
     }

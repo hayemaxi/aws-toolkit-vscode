@@ -409,7 +409,7 @@ describe('CodeWhisperer-basicCommands', function () {
         it('includes the "source" in the command execution metric', async function () {
             tryRegister(focusAmazonQPanel)
             sinon.stub(AuthUtil.instance.secondaryAuth, 'deleteConnection')
-            targetCommand = testCommand(signoutCodeWhisperer, AuthUtil.instance)
+            targetCommand = testCommand(signoutCodeWhisperer)
             await targetCommand.execute(placeholder, cwQuickPickSource)
             assertTelemetry('vscode_executeCommand', [
                 { source: cwQuickPickSource, command: focusAmazonQPanel.id },
