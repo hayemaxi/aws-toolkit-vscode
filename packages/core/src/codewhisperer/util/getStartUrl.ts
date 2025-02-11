@@ -5,7 +5,7 @@
 
 import * as CodeWhispererConstants from '../models/constants'
 import { isValidResponse } from '../../shared/wizards/wizard'
-import { AuthUtil, amazonQScopes } from './authUtil'
+import { amazonQScopes } from './authUtil'
 import { CancellationError } from '../../shared/utilities/timeoutUtils'
 import { ToolkitError } from '../../shared/errors'
 import { telemetry } from '../../shared/telemetry/telemetry'
@@ -13,6 +13,7 @@ import { createStartUrlPrompter, showRegionPrompter } from '../../auth/utils'
 import { Region } from '../../shared/regions/endpoints'
 import { Commands } from '../../shared/vscode/commands2'
 import { vsCodeState } from '../models/model'
+import { Auth2 } from '../../auth/auth2'
 
 export const getStartUrl = async () => {
     const inputBox = await createStartUrlPrompter('IAM Identity Center', amazonQScopes)
@@ -28,9 +29,8 @@ export const getStartUrl = async () => {
 }
 
 export async function connectToEnterpriseSso(startUrl: string, region: Region['id']) {
-    let conn
     try {
-        conn = await AuthUtil.instance.connectToEnterpriseSso(startUrl, region)
+        await Auth2.instance.authenticate(startUrl, region)
     } catch (e) {
         throw ToolkitError.chain(e, CodeWhispererConstants.failedToConnectIamIdentityCenter, {
             code: 'FailedToConnect',
@@ -38,6 +38,4 @@ export async function connectToEnterpriseSso(startUrl: string, region: Region['i
     }
     vsCodeState.isFreeTierLimitReached = false
     await Commands.tryExecute('aws.amazonq.enableCodeSuggestions')
-
-    return conn
 }

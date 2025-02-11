@@ -92,13 +92,10 @@ import { syncSecurityIssueWebview } from './views/securityIssue/securityIssueWeb
 import { detectCommentAboveLine } from '../shared/utilities/commentUtils'
 
 let localize: nls.LocalizeFunc
-
+let securityPanelViewProvider: SecurityPanelViewProvider
+let client: codewhispererClient.DefaultCodeWhispererClient
 export async function activate(context: ExtContext): Promise<void> {
     localize = nls.loadMessageBundle()
-
-    // initialize AuthUtil earlier to make sure it can listen to connection change events.
-    const auth = AuthUtil.instance
-    auth.initCodeWhispererHooks()
 
     // TODO: is this indirection useful?
     registerDeclaredCommands(
@@ -110,7 +107,7 @@ export async function activate(context: ExtContext): Promise<void> {
     /**
      * CodeWhisperer security panel
      */
-    const securityPanelViewProvider = new SecurityPanelViewProvider(context.extensionContext)
+    securityPanelViewProvider = new SecurityPanelViewProvider(context.extensionContext)
     context.extensionContext.subscriptions.push(
         vscode.window.registerWebviewViewProvider(SecurityPanelViewProvider.viewType, securityPanelViewProvider)
     )
@@ -129,7 +126,7 @@ export async function activate(context: ExtContext): Promise<void> {
     /**
      * Service control
      */
-    const client = new codewhispererClient.DefaultCodeWhispererClient()
+    client = new codewhispererClient.DefaultCodeWhispererClient()
 
     // Service initialization
     const container = Container.instance
@@ -139,7 +136,7 @@ export async function activate(context: ExtContext): Promise<void> {
     context.extensionContext.subscriptions.push(
         // register toolkit api callback
         registerToolkitApiCallback.register(),
-        signoutCodeWhisperer.register(auth),
+        signoutCodeWhisperer.register(),
         /**
          * Configuration change
          */
@@ -150,7 +147,7 @@ export async function activate(context: ExtContext): Promise<void> {
 
             if (configurationChangeEvent.affectsConfiguration('amazonQ.showInlineCodeSuggestionsWithCodeReferences')) {
                 ReferenceLogViewProvider.instance.update()
-                if (auth.isEnterpriseSsoInUse()) {
+                if (AuthUtil.instance.isEnterpriseSsoInUse()) {
                     await vscode.window
                         .showInformationMessage(
                             CodeWhispererConstants.ssoConfigAlertMessage,
@@ -165,7 +162,7 @@ export async function activate(context: ExtContext): Promise<void> {
             }
 
             if (configurationChangeEvent.affectsConfiguration('amazonQ.shareContentWithAWS')) {
-                if (auth.isEnterpriseSsoInUse()) {
+                if (AuthUtil.instance.isEnterpriseSsoInUse()) {
                     await vscode.window
                         .showInformationMessage(
                             CodeWhispererConstants.ssoConfigAlertMessageShareData,
@@ -340,29 +337,39 @@ export async function activate(context: ExtContext): Promise<void> {
         vscode.commands.registerCommand('aws.amazonq.openEditorAtRange', openEditorAtRange)
     )
 
+    void FeatureConfigProvider.instance.fetchFeatureConfigs().catch((error) => {
+        getLogger().error('Failed to fetch feature configs - %s', error)
+    })
+
+    await Commands.tryExecute('aws.amazonq.refreshConnectionCallback')
+    container.ready()
+}
+
+export async function postInit(context: ExtContext) {
+    await AuthUtil.instance.setVscodeContextProps()
     // run the auth startup code with context for telemetry
     await telemetry.function_call.run(
         async () => {
-            await auth.restore()
-            await auth.clearExtraConnections()
+            // await auth.restore()
+            // await auth.clearExtraConnections()
 
-            if (auth.isConnectionExpired()) {
-                auth.showReauthenticatePrompt().catch((e) => {
+            if (AuthUtil.instance.isConnectionExpired()) {
+                AuthUtil.instance.showReauthenticatePrompt().catch((e) => {
                     const defaulMsg = localize('AWS.generic.message.error', 'Failed to reauth:')
                     void logAndShowError(localize, e, 'showReauthenticatePrompt', defaulMsg)
                 })
-                if (auth.isEnterpriseSsoInUse()) {
-                    await auth.notifySessionConfiguration()
+                if (AuthUtil.instance.isEnterpriseSsoInUse()) {
+                    await AuthUtil.instance.notifySessionConfiguration()
                 }
             }
         },
         { emit: false, functionId: { name: 'activateCwCore' } }
     )
 
-    if (auth.isValidEnterpriseSsoInUse()) {
+    if (AuthUtil.instance.isValidEnterpriseSsoInUse()) {
         await notifyNewCustomizations()
     }
-    if (auth.isBuilderIdInUse()) {
+    if (AuthUtil.instance.isBuilderIdInUse()) {
         await CodeScansState.instance.setScansEnabled(false)
     }
 
@@ -374,15 +381,16 @@ export async function activate(context: ExtContext): Promise<void> {
     setSubscriptionsForCodeIssues()
 
     function shouldRunAutoScan(editor: vscode.TextEditor | undefined, isScansEnabled?: boolean) {
-        return (
+        const result =
             (isScansEnabled ?? CodeScansState.instance.isScansEnabled()) &&
             !CodeScansState.instance.isMonthlyQuotaExceeded() &&
-            auth.isConnectionValid() &&
-            !auth.isBuilderIdInUse() &&
+            AuthUtil.instance.isConnectionValid() &&
+            !AuthUtil.instance.isBuilderIdInUse() &&
             editor &&
             editor.document.uri.scheme === 'file' &&
             securityScanLanguageContext.isLanguageSupported(editor.document.languageId)
-        )
+
+        return result
     }
 
     function setSubscriptionsForAutoScans() {
@@ -460,13 +468,6 @@ export async function activate(context: ExtContext): Promise<void> {
             }
         })
     }
-
-    void FeatureConfigProvider.instance.fetchFeatureConfigs().catch((error) => {
-        getLogger().error('Failed to fetch feature configs - %s', error)
-    })
-
-    await Commands.tryExecute('aws.amazonq.refreshConnectionCallback')
-    container.ready()
 
     function setSubscriptionsForCodeIssues() {
         context.extensionContext.subscriptions.push(
