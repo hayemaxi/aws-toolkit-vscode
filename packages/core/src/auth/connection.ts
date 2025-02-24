@@ -18,7 +18,6 @@ import { AuthModifyConnection, telemetry } from '../shared/telemetry/telemetry'
 import { asStringifiedStack } from '../shared/telemetry/spans'
 import { getTelemetryReason, getTelemetryReasonDesc } from '../shared/errors'
 import { builderIdStartUrl } from './sso/constants'
-import { Auth2 } from './auth2'
 
 /** Shows a warning message unless it is the same as the last one shown. */
 const warnOnce = onceChanged((s: string, url: string) => {
@@ -48,12 +47,9 @@ export type AuthType = 'credentials' | 'builderId' | 'identityCenter' | 'unknown
 
 export const isIamConnection = (conn?: Connection): conn is IamConnection => conn?.type === 'iam'
 export const isSsoConnection = (conn?: Connection, type: SsoType = 'any'): conn is SsoConnection => {
-    if (Auth2.instance.getAuthState() !== 'connected') {
+    if (conn?.type !== 'sso') {
         return false
     }
-    // if (conn?.type !== 'sso') {
-    //     return false
-    // }
     // At this point the conn is an SSO conn, but now we must determine the specific type
     switch (type) {
         case 'idc':
@@ -61,9 +57,9 @@ export const isSsoConnection = (conn?: Connection, type: SsoType = 'any'): conn 
             // have any unique identifiers, so we must eliminate the other SSO
             // types to determine if this is Identity Center.
             // This condition should grow as more SsoType's get added.
-            return Auth2.instance.getProfile()?.startUrl !== builderIdStartUrl
+            return !isBuilderIdConnection(conn)
         case 'builderId':
-            return Auth2.instance.getProfile()?.startUrl === builderIdStartUrl
+            return conn.startUrl === builderIdStartUrl
         case 'any':
             return true
     }

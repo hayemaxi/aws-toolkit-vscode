@@ -8,7 +8,6 @@ import * as nls from 'vscode-nls'
 import * as crypto from 'crypto'
 import { LanguageClient, LanguageClientOptions } from 'vscode-languageclient'
 import { registerInlineCompletion } from '../app/inline/completion'
-import { notificationTypes } from './auth'
 import { AuthUtil } from 'aws-core-vscode/codewhisperer'
 import {
     ResourcePaths,
@@ -25,7 +24,7 @@ import {
     ShowDocumentRequest,
     ShowDocumentResult,
 } from '@aws/language-server-runtimes/protocol'
-import { Auth2, SsoConnection, getRegistrationCacheFile, getTokenCacheFile, getCacheDir } from 'aws-core-vscode/auth'
+import { LanguageClientAuth, notificationTypes } from 'aws-core-vscode/auth'
 
 const localize = nls.loadMessageBundle()
 
@@ -33,9 +32,10 @@ export function startLanguageServer(extensionContext: vscode.ExtensionContext, r
     const toDispose = extensionContext.subscriptions
 
     const serverModule = resourcePaths.lsp
+    const encryptionKey = crypto.randomBytes(32)
 
     const serverOptions = createServerOptions({
-        encryptionKey: Auth2.encryptionKey,
+        encryptionKey,
         executable: resourcePaths.node,
         serverModule,
         execArgv: [
@@ -102,7 +102,7 @@ export function startLanguageServer(extensionContext: vscode.ExtensionContext, r
         client.onRequest<ConnectionMetadata, Error>(notificationTypes.getConnectionMetadata.method, () => {
             return {
                 sso: {
-                    startUrl: AuthUtil.instance.auth.startUrl,
+                    startUrl: AuthUtil.instance.connection?.startUrl,
                 },
             }
         })
@@ -124,20 +124,20 @@ export function startLanguageServer(extensionContext: vscode.ExtensionContext, r
         //         client.sendNotification(notificationTypes.deleteBearerToken.method)
         //     })
         // )
-        Auth2.create(client)
-        const conn = (AuthUtil.instance.conn as SsoConnection) ?? AuthUtil.instance.auth.activeConnection
-        if (conn) {
-            await Auth2.instance.importOldSsoSession(
-                conn.startUrl,
-                conn.ssoRegion,
-                getRegistrationCacheFile(getCacheDir(), {
-                    startUrl: conn.startUrl,
-                    region: conn.ssoRegion,
-                    scopes: conn.scopes,
-                }),
-                getTokenCacheFile(getCacheDir(), (conn.id ?? conn.startUrl) as any)
-            )
-            await AuthUtil.instance.secondaryAuth.deleteConnection()
-        }
+        AuthUtil.create(new LanguageClientAuth(client, clientId, encryptionKey))
+        // const conn = (AuthUtil.instance.conn as SsoConnection) ?? AuthUtil.instance.auth.activeConnection
+        // if (conn) {
+        //     await Auth2.instance.importOldSsoSession(
+        //         conn.startUrl,
+        //         conn.ssoRegion,
+        //         getRegistrationCacheFile(getCacheDir(), {
+        //             startUrl: conn.startUrl,
+        //             region: conn.ssoRegion,
+        //             scopes: conn.scopes,
+        //         }),
+        //         getTokenCacheFile(getCacheDir(), (conn.id ?? conn.startUrl) as any)
+        //     )
+        //     await OldAuthUtil.instance.secondaryAuth.deleteConnection()
+        // }
     })
 }

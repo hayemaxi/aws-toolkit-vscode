@@ -226,9 +226,9 @@ export class DocController {
 
             const workspaceFolderName = vscode.workspace.workspaceFolders?.[0].name || ''
 
-            const authState = await AuthUtil.instance.getChatAuthState()
+            const authState = AuthUtil.instance.getAuthState()
 
-            if (authState.amazonQ !== 'connected') {
+            if (authState !== 'connected') {
                 await this.messenger.sendAuthNeededExceptionMessage(authState, data.tabID)
                 session.isAuthenticating = true
                 return
@@ -452,8 +452,8 @@ export class DocController {
         try {
             getLogger().debug(`${featureName}: Processing message: ${message.message}`)
 
-            const authState = await AuthUtil.instance.getChatAuthState()
-            if (authState.amazonQ !== 'connected') {
+            const authState = AuthUtil.instance.getAuthState()
+            if (authState !== 'connected') {
                 await this.messenger.sendAuthNeededExceptionMessage(authState, message.tabID)
                 session.isAuthenticating = true
                 return
@@ -487,8 +487,8 @@ export class DocController {
             this.folderPath = ''
             this.mode = Mode.NONE
 
-            const authState = await AuthUtil.instance.getChatAuthState()
-            if (authState.amazonQ !== 'connected') {
+            const authState = AuthUtil.instance.getAuthState()
+            if (authState !== 'connected') {
                 void this.messenger.sendAuthNeededExceptionMessage(authState, message.tabID)
                 session.isAuthenticating = true
                 return

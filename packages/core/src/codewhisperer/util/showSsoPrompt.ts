@@ -16,8 +16,8 @@ import { telemetry } from '../../shared/telemetry/telemetry'
 import { createBuilderIdItem, createSsoItem, createIamItem } from '../../auth/utils'
 import { Commands } from '../../shared/vscode/commands2'
 import { vsCodeState } from '../models/model'
-import { Auth2 } from '../../auth/auth2'
 import { builderIdRegion, builderIdStartUrl } from '../../auth/sso/constants'
+import { AuthUtil } from '../util/authUtil'
 
 export const showCodeWhispererConnectionPrompt = async () => {
     const items = [createBuilderIdItem(), createSsoItem(), createCodeWhispererIamItem()]
@@ -47,7 +47,7 @@ export const showCodeWhispererConnectionPrompt = async () => {
 export async function awsIdSignIn() {
     getLogger().info('selected AWS ID sign in')
     try {
-        await Auth2.instance.authenticate(builderIdStartUrl, builderIdRegion)
+        await AuthUtil.instance.login(builderIdStartUrl, builderIdRegion)
     } catch (e) {
         throw ToolkitError.chain(e, failedToConnectAwsBuilderId, { code: 'FailedToConnect' })
     }
