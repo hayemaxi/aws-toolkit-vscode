@@ -49,7 +49,7 @@ describe('onInlineAcceptance', function () {
             })
 
             const testStartUrl = 'testStartUrl'
-            sinon.stub(AuthUtil.instance, 'startUrl').value(testStartUrl)
+            sinon.stub(AuthUtil.instance, 'connection').value({ startUrl: testStartUrl })
             const mockEditor = createMockTextEditor()
             session.requestIdList = ['test']
             RecommendationHandler.instance.requestId = 'test'

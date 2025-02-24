@@ -134,11 +134,7 @@ describe('Controller - Doc Generation', () => {
             configurable: true,
         })
 
-        sinon.stub(AuthUtil.instance, 'getChatAuthState').resolves({
-            codewhispererCore: 'connected',
-            codewhispererChat: 'connected',
-            amazonQ: 'connected',
-        })
+        sinon.stub(AuthUtil.instance, 'getAuthState').returns('connected')
         sinon.stub(FileSystem.prototype, 'exists').resolves(false)
         getSessionStub = sinon.stub(controllerSetup.sessionStorage, 'getSession').resolves(session)
         modifiedReadme = ReadmeBuilder.createReadmeWithRepoStructure()

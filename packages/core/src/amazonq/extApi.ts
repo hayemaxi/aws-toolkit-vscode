@@ -9,6 +9,7 @@ import { SendMessageCommandOutput, SendMessageRequest } from '@amzn/amazon-q-dev
 import { GenerateAssistantResponseCommandOutput, GenerateAssistantResponseRequest } from '@amzn/codewhisperer-streaming'
 import { FeatureAuthState } from '../codewhisperer/util/authUtil'
 import { ToolkitError } from '../shared/errors'
+import { AuthStatus } from '../auth/auth2'
 
 /**
  * This interface is used and exported by the amazon q extension. If you make a change here then
@@ -22,6 +23,7 @@ export interface api {
     authApi: {
         reauthIfNeeded(): Promise<void>
         getChatAuthState(): Promise<FeatureAuthState>
+        getAuthState(): AuthStatus
     }
 }
 

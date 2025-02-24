@@ -20,7 +20,7 @@ export {
     isIamConnection,
 } from './connection'
 export { Auth } from './auth'
-export { Auth2 } from './auth2'
+export { LanguageClientAuth, AuthStatus, notificationTypes } from './auth2'
 export { CredentialsStore } from './credentials/store'
 export { LoginManager } from './deprecated/loginManager'
 export { getTokenCacheFile, getRegistrationCacheFile, getCacheDir } from './sso/cache'

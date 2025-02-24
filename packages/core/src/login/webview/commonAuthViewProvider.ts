@@ -44,8 +44,6 @@ import { CodeCatalystAuthenticationProvider } from '../../codecatalyst/auth'
 import { telemetry } from '../../shared/telemetry/telemetry'
 import { AuthSources } from './util'
 import { AuthFlowStates } from './vue/types'
-import { getTelemetryMetadataForConn } from '../../auth/connection'
-import { AuthUtil } from '../../codewhisperer/util/authUtil'
 
 export class CommonAuthViewProvider implements WebviewViewProvider {
     public readonly viewType: string
@@ -100,7 +98,7 @@ export class CommonAuthViewProvider implements WebviewViewProvider {
                 if (authState === AuthFlowStates.REAUTHNEEDED || authState === AuthFlowStates.REAUTHENTICATING) {
                     this.webView!.server.storeMetricMetadata({
                         isReAuth: true,
-                        ...(await getTelemetryMetadataForConn(AuthUtil.instance.conn)),
+                        // ...(await getTelemetryMetadataForConn(AuthUtil.instance.conn)), // TODO: Re-add metrics
                     })
                 } else {
                     this.webView!.server.storeMetricMetadata({ isReAuth: false })

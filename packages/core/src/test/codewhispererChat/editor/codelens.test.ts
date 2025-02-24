@@ -15,7 +15,7 @@ import { InstalledClock } from '@sinonjs/fake-timers'
 import globals from '../../../shared/extensionGlobals'
 import { focusAmazonQPanel } from '../../../codewhispererChat/commands/registerCommands'
 import sinon from 'sinon'
-import { AuthState, AuthStates, AuthUtil, FeatureAuthState } from '../../../codewhisperer/util/authUtil'
+import { AuthStates, AuthUtil } from '../../../codewhisperer/util/authUtil'
 import { inlinehintKey } from '../../../codewhisperer/models/constants'
 import {
     AutotriggerState,
@@ -24,6 +24,7 @@ import {
     PressTabState,
     TryMoreExState,
 } from '../../../codewhisperer/views/lineAnnotationController'
+import { AuthStatus } from '../../../auth/auth2'
 
 describe('TryChatCodeLensProvider', () => {
     let instance: TryChatCodeLensProvider
@@ -57,8 +58,8 @@ describe('TryChatCodeLensProvider', () => {
         sinon.restore()
     })
 
-    function stubConnection(state: AuthState) {
-        return sinon.stub(AuthUtil.instance, 'getChatAuthStateSync').returns({ amazonQ: state } as FeatureAuthState)
+    function stubConnection(state: AuthStatus) {
+        return sinon.stub(AuthUtil.instance, 'getAuthState').returns(state)
     }
 
     it('keeps returning a code lense until it hits the max times it should show', async function () {
@@ -107,7 +108,7 @@ describe('TryChatCodeLensProvider', () => {
     })
 
     it('does NOT show codelens if amazon Q is not connected', async function () {
-        const testConnection = async (state: AuthState) => {
+        const testConnection = async (state: AuthStatus) => {
             const stub = stubConnection(state)
 
             const emptyResult = await instance.provideCodeLenses({} as any, new vscode.CancellationTokenSource().token)
@@ -115,7 +116,9 @@ describe('TryChatCodeLensProvider', () => {
             stub.restore()
         }
 
-        const testStates = Object.values(AuthStates).filter((s) => s !== AuthStates.connected)
+        const testStates = Object.values(['connected', 'notConnected', 'expired'] as AuthStatus[]).filter(
+            (s) => s !== AuthStates.connected
+        )
         for (const state of testStates) {
             await testConnection(state)
         }

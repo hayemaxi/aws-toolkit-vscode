@@ -209,8 +209,8 @@ export class TestController {
         try {
             logger.debug(`Q - Test: Session created with id: ${session.tabID}`)
 
-            const authState = await AuthUtil.instance.getChatAuthState()
-            if (authState.amazonQ !== 'connected') {
+            const authState = AuthUtil.instance.getAuthState()
+            if (authState !== 'connected') {
                 void this.messenger.sendAuthNeededExceptionMessage(authState, tabID)
                 session.isAuthenticating = true
                 return
@@ -227,7 +227,7 @@ export class TestController {
         telemetry.amazonq_feedback.emit({
             featureId: 'amazonQTest',
             amazonqConversationId: session.startTestGenerationRequestId,
-            credentialStartUrl: AuthUtil.instance.startUrl,
+            credentialStartUrl: AuthUtil.instance.connection?.startUrl,
             interactionType: message.vote,
         })
     }
@@ -428,8 +428,8 @@ export class TestController {
             userPrompt = message.prompt.slice(0, maxUserPromptLength)
 
             // check that the session is authenticated
-            const authState = await AuthUtil.instance.getChatAuthState()
-            if (authState.amazonQ !== 'connected') {
+            const authState = AuthUtil.instance.getAuthState()
+            if (authState !== 'connected') {
                 void this.messenger.sendAuthNeededExceptionMessage(authState, tabID)
                 session.isAuthenticating = true
                 return

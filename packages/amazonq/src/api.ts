@@ -27,7 +27,16 @@ export default {
             }
         },
         async getChatAuthState() {
-            return AuthUtil.instance.getChatAuthState()
+            let state: string = AuthUtil.instance.getAuthState()
+            state = state === 'notConnected' ? 'disconnected' : state
+            return {
+                amazonQ: state,
+                codewhispererCore: state,
+                codewhispererChat: state,
+            } as any
+        },
+        getAuthState() {
+            return AuthUtil.instance.getAuthState()
         },
     },
 } satisfies api

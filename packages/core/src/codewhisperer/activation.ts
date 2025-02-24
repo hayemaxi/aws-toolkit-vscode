@@ -147,7 +147,7 @@ export async function activate(context: ExtContext): Promise<void> {
 
             if (configurationChangeEvent.affectsConfiguration('amazonQ.showInlineCodeSuggestionsWithCodeReferences')) {
                 ReferenceLogViewProvider.instance.update()
-                if (AuthUtil.instance.isEnterpriseSsoInUse()) {
+                if (AuthUtil.instance.isIdcConnection()) {
                     await vscode.window
                         .showInformationMessage(
                             CodeWhispererConstants.ssoConfigAlertMessage,
@@ -162,7 +162,7 @@ export async function activate(context: ExtContext): Promise<void> {
             }
 
             if (configurationChangeEvent.affectsConfiguration('amazonQ.shareContentWithAWS')) {
-                if (AuthUtil.instance.isEnterpriseSsoInUse()) {
+                if (AuthUtil.instance.isIdcConnection()) {
                     await vscode.window
                         .showInformationMessage(
                             CodeWhispererConstants.ssoConfigAlertMessageShareData,
@@ -358,7 +358,7 @@ export async function postInit(context: ExtContext) {
                     const defaulMsg = localize('AWS.generic.message.error', 'Failed to reauth:')
                     void logAndShowError(localize, e, 'showReauthenticatePrompt', defaulMsg)
                 })
-                if (AuthUtil.instance.isEnterpriseSsoInUse()) {
+                if (AuthUtil.instance.isIdcConnection()) {
                     await AuthUtil.instance.notifySessionConfiguration()
                 }
             }
@@ -366,10 +366,10 @@ export async function postInit(context: ExtContext) {
         { emit: false, functionId: { name: 'activateCwCore' } }
     )
 
-    if (AuthUtil.instance.isValidEnterpriseSsoInUse()) {
+    if (AuthUtil.instance.isIdcConnection()) {
         await notifyNewCustomizations()
     }
-    if (AuthUtil.instance.isBuilderIdInUse()) {
+    if (AuthUtil.instance.isBuilderIdConnection()) {
         await CodeScansState.instance.setScansEnabled(false)
     }
 
@@ -384,8 +384,8 @@ export async function postInit(context: ExtContext) {
         const result =
             (isScansEnabled ?? CodeScansState.instance.isScansEnabled()) &&
             !CodeScansState.instance.isMonthlyQuotaExceeded() &&
-            AuthUtil.instance.isConnectionValid() &&
-            !AuthUtil.instance.isBuilderIdInUse() &&
+            AuthUtil.instance.isConnected() &&
+            !AuthUtil.instance.isBuilderIdConnection() &&
             editor &&
             editor.document.uri.scheme === 'file' &&
             securityScanLanguageContext.isLanguageSupported(editor.document.languageId)
