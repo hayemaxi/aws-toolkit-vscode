@@ -17,6 +17,7 @@ export type LogTopic =
     | 'chat'
     | 'stepfunctions'
     | 'auth2'
+    | 'AuthUtil'
     | 'unknown'
 
 class ErrorLog {
