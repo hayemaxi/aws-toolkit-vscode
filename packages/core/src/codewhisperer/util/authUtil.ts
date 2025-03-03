@@ -8,7 +8,13 @@ import * as localizedText from '../../shared/localizedText'
 import * as nls from 'vscode-nls'
 import { ToolkitError } from '../../shared/errors'
 import { AmazonQPromptSettings } from '../../shared/settings'
-import { scopesCodeWhispererCore, scopesCodeWhispererChat, scopesFeatureDev, scopesGumby } from '../../auth/connection'
+import {
+    scopesCodeWhispererCore,
+    scopesCodeWhispererChat,
+    scopesFeatureDev,
+    scopesGumby,
+    StoredProfile,
+} from '../../auth/connection'
 import { getLogger } from '../../shared/logger/logger'
 import { Commands } from '../../shared/vscode/commands2'
 import { vsCodeState } from '../models/model'
@@ -17,21 +23,14 @@ import { showAmazonQWalkthroughOnce } from '../../amazonq/onboardingPage/walkthr
 import { setContext } from '../../shared/vscode/setContext'
 import { openUrl } from '../../shared/utilities/vsCodeUtils'
 import { telemetry } from '../../shared/telemetry/telemetry'
-import {
-    AuthStateEvent,
-    ConnectionManager,
-    IamLogin,
-    LanguageClientAuth,
-    Login,
-    SsoConnection,
-    SsoLogin,
-} from '../../auth/auth2'
+import { AuthStateEvent, LanguageClientAuth, SsoLogin } from '../../auth/auth2'
 import { builderIdStartUrl } from '../../auth/sso/constants'
-import { SsoTokenChangedParams } from '@aws/language-server-runtimes/protocol'
 import { VSCODE_EXTENSION_ID } from '../../shared/extensions'
+import { getEnvironmentSpecificMemento } from '../../shared/utilities/mementos'
 
 const localize = nls.loadMessageBundle()
-const logger = getLogger('AuthUtil')
+// TODO: Add logging:
+// const logger = getLogger('AuthUtil')
 
 /** Backwards compatibility for connections w pre-chat scopes */
 export const codeWhispererCoreScopes = [...scopesCodeWhispererCore]
@@ -44,7 +43,9 @@ export const amazonQScopes = [...codeWhispererChatScopes, ...scopesGumby, ...sco
  */
 export class AuthUtil {
     public readonly profileName = VSCODE_EXTENSION_ID.amazonq
-    private session: Login | undefined
+
+    // TODO: IAM
+    private session: SsoLogin
 
     static create(lspAuth: LanguageClientAuth) {
         return (this.#instance ??= new this(lspAuth))
@@ -54,29 +55,19 @@ export class AuthUtil {
     static #instance: AuthUtil
     public static get instance() {
         if (!this.#instance) {
-            throw new ToolkitError('AmazonQSsoAuth not ready. Was it initialized with a running LSP?')
+            throw new ToolkitError('AuthUtil not ready. Was it initialized with a running LSP?')
         }
         return this.#instance
     }
 
-    private constructor(
-        private readonly lspAuth: LanguageClientAuth,
-        private readonly connectionManager = ConnectionManager.instance
-    ) {
+    private constructor(private readonly lspAuth: LanguageClientAuth) {
+        // TODO: IAM for SageMaker/CodeEditor
+        this.session = new SsoLogin(this.profileName, this.lspAuth)
         this.onDidChangeConnectionState((e: AuthStateEvent) => this.stateChangeHandler(e))
-        lspAuth.registerSsoTokenChangedHandler((params: SsoTokenChangedParams) => this.ssoTokenChangedHandler(params))
-
-        const existingConn = connectionManager.getConnection(this.profileName)
-        if (existingConn?.type === 'sso') {
-            this.session = new SsoLogin(this.profileName, this.lspAuth, this.connectionManager)
-        } else if (existingConn?.type === 'iam') {
-            this.session = new IamLogin() // TODO
-        }
     }
 
     async login(startUrl: string, region: string) {
-        this.session = new SsoLogin(this.profileName, this.lspAuth, this.connectionManager)
-        const response = this.session.login(startUrl, region, amazonQScopes)
+        const response = await this.session.login({ startUrl, region, scopes: amazonQScopes })
         await showAmazonQWalkthroughOnce()
 
         return response
@@ -87,7 +78,7 @@ export class AuthUtil {
             throw new ToolkitError('Cannot reauthenticate non-SSO sessions.')
         }
 
-        return this.session.relogin()
+        return this.session.login()
     }
 
     // TODO
@@ -111,30 +102,25 @@ export class AuthUtil {
         }
     }
 
-    get connection(): SsoConnection | undefined {
-        return this.connectionManager.getConnection(this.profileName) as SsoConnection // TODO: IAM
+    get connection() {
+        return this.session.data
     }
+
+    // migrateExistingConnection() {
+    //     const profiles: { readonly [id: string]: StoredProfile } | undefined =
+    //         getEnvironmentSpecificMemento().get('auth.profiles')
+    //     if (profiles) {
+
+    //     }
+    // }
+
+    // async getConnection() {
+    //     const result = (await this.lspAuth.getProfile(this.profileName)).ssoSession?.settings
+    //     return result ? { startUrl: result?.sso_start_url, region: result?.sso_region } : undefined
+    // }
 
     getAuthState() {
-        return this.connectionManager.getConnection(this.profileName)?.state ?? 'notConnected'
-    }
-
-    private async ssoTokenChangedHandler(params: SsoTokenChangedParams) {
-        if (params.ssoTokenId !== this.connection?.tokenId) {
-            return
-        }
-        switch (params.kind) {
-            case 'Expired':
-                // Not implemented on LSP yet
-                logger.debug("AmazonQSsoAuth: received 'Expired' event from LSP, but this event is not handled.")
-                break
-            case 'Refreshed': {
-                const params =
-                    this.session?.type === 'sso' ? (await this.session.getToken()).updateCredentialsParams : undefined // TODO
-                await this.lspAuth.updateBearerToken(params!)
-                break
-            }
-        }
+        return this.session.getConnectionState()
     }
 
     isConnected() {
@@ -146,17 +132,15 @@ export class AuthUtil {
     }
 
     isBuilderIdConnection() {
-        const conn = this.connection
-        return conn?.type === 'sso' && conn.startUrl === builderIdStartUrl
+        return this.connection?.startUrl === builderIdStartUrl
     }
 
     isIdcConnection() {
-        const conn = this.connection
-        return conn?.type === 'sso' && conn?.startUrl !== builderIdStartUrl
+        return this.connection?.startUrl && this.connection?.startUrl !== builderIdStartUrl
     }
 
     onDidChangeConnectionState(handler: (e: AuthStateEvent) => any) {
-        return this.connectionManager.onDidChangeConnectionState(this.profileName, handler)
+        return this.session.onDidChangeConnectionState(handler)
     }
 
     // legacy
@@ -239,6 +223,17 @@ export class AuthUtil {
     }
 
     private async stateChangeHandler(e: AuthStateEvent) {
+        if (e.state === 'refreshed') {
+            const params =
+                this.session?.type === 'sso' ? (await this.session.getToken()).updateCredentialsParams : undefined // TODO
+            await this.lspAuth.updateBearerToken(params!)
+            return
+        }
+
+        if (e.state === 'expired') {
+            this.lspAuth.deleteBearerToken()
+        }
+
         getLogger().info(`codewhisperer: connection changed to ${e.state}`)
 
         vsCodeState.isFreeTierLimitReached = false
