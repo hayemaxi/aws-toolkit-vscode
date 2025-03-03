@@ -39,6 +39,7 @@ export async function initialize(loginManager: LoginManager): Promise<void> {
 
 /**
  * Show the Manage Connections page when the extension starts up, if it should be shown.
+ * TODO: Delete this, it doesn't do anything.
  */
 async function showManageConnectionsOnStartup() {
     // Do not show connection management to user in certain scenarios.

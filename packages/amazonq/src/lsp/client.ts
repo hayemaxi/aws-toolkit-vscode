@@ -116,14 +116,15 @@ export function startLanguageServer(extensionContext: vscode.ExtensionContext, r
             }
         })
 
-        // toDispose.push(
-        //     AuthUtil.instance.auth.onDidChangeActiveConnection(async () => {
-        //         await auth.init()
-        //     }),
-        //     AuthUtil.instance.auth.onDidDeleteConnection(async () => {
-        //         client.sendNotification(notificationTypes.deleteBearerToken.method)
-        //     })
-        // )
+        client.onRequest<ShowMessageRequestResult, Error>(
+            ShowMessageRequest.method,
+            async (params: ShowMessageRequestParams) => {
+                const response = await vscode.window.showInformationMessage(params.message)
+
+                return ''
+            }
+        )
+
         AuthUtil.create(new LanguageClientAuth(client, clientId, encryptionKey))
         // const conn = (AuthUtil.instance.conn as SsoConnection) ?? AuthUtil.instance.auth.activeConnection
         // if (conn) {
