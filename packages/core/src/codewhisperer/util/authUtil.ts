@@ -23,7 +23,7 @@ import { showAmazonQWalkthroughOnce } from '../../amazonq/onboardingPage/walkthr
 import { setContext } from '../../shared/vscode/setContext'
 import { openUrl } from '../../shared/utilities/vsCodeUtils'
 import { telemetry } from '../../shared/telemetry/telemetry'
-import { AuthStateEvent, LanguageClientAuth, SsoLogin } from '../../auth/auth2'
+import { AuthState, AuthStateEvent, LanguageClientAuth, SsoLogin } from '../../auth/auth2'
 import { builderIdStartUrl } from '../../auth/sso/constants'
 import { VSCODE_EXTENSION_ID } from '../../shared/extensions'
 import { getEnvironmentSpecificMemento } from '../../shared/utilities/mementos'
@@ -39,7 +39,7 @@ export const amazonQScopes = [...codeWhispererChatScopes, ...scopesGumby, ...sco
 
 /**
  * Handles authentication within Amazon Q.
- * Amazon Q only supports connection at a time.
+ * Amazon Q only supports 1 connection at a time.
  */
 export class AuthUtil {
     public readonly profileName = VSCODE_EXTENSION_ID.amazonq
@@ -66,6 +66,11 @@ export class AuthUtil {
         this.onDidChangeConnectionState((e: AuthStateEvent) => this.stateChangeHandler(e))
     }
 
+    async restore() {
+        await this.session.restore()
+        await this.refreshState()
+    }
+
     async login(startUrl: string, region: string) {
         const response = await this.session.login({ startUrl, region, scopes: amazonQScopes })
         await showAmazonQWalkthroughOnce()
@@ -73,16 +78,13 @@ export class AuthUtil {
         return response
     }
 
-    relogin() {
+    reauthenticate() {
         if (this.session?.type !== 'sso') {
             throw new ToolkitError('Cannot reauthenticate non-SSO sessions.')
         }
 
-        return this.session.login()
+        return this.session.reauthenticate()
     }
-
-    // TODO
-    async loginIam() {}
 
     logout() {
         if (this.session?.type !== 'sso') {
@@ -106,18 +108,12 @@ export class AuthUtil {
         return this.session.data
     }
 
-    // migrateExistingConnection() {
-    //     const profiles: { readonly [id: string]: StoredProfile } | undefined =
-    //         getEnvironmentSpecificMemento().get('auth.profiles')
-    //     if (profiles) {
-
-    //     }
-    // }
-
-    // async getConnection() {
-    //     const result = (await this.lspAuth.getProfile(this.profileName)).ssoSession?.settings
-    //     return result ? { startUrl: result?.sso_start_url, region: result?.sso_region } : undefined
-    // }
+    migrateExistingConnection() {
+        const profiles: { readonly [id: string]: StoredProfile } | undefined =
+            getEnvironmentSpecificMemento().get('auth.profiles')
+        if (profiles) {
+        }
+    }
 
     getAuthState() {
         return this.session.getConnectionState()
@@ -162,7 +158,7 @@ export class AuthUtil {
             suppressId: 'codeWhispererConnectionExpired',
             settings: AmazonQPromptSettings.instance,
             reauthFunc: async () => {
-                await this.relogin()
+                await this.reauthenticate()
             },
         })
 
@@ -228,29 +224,27 @@ export class AuthUtil {
                 this.session?.type === 'sso' ? (await this.session.getToken()).updateCredentialsParams : undefined // TODO
             await this.lspAuth.updateBearerToken(params!)
             return
+        } else {
+            getLogger().info(`codewhisperer: connection changed to ${e.state}`)
+            await this.refreshState(e.state)
         }
+    }
 
-        if (e.state === 'expired') {
+    private async refreshState(state: AuthState = this.getAuthState()) {
+        if (state === 'expired') {
             this.lspAuth.deleteBearerToken()
         }
 
-        getLogger().info(`codewhisperer: connection changed to ${e.state}`)
-
         vsCodeState.isFreeTierLimitReached = false
-        await this.setVscodeContextProps(e.state)
+        await this.setVscodeContextProps(state)
         await Promise.all([
-            // may trigger before these modules are activated.
             Commands.tryExecute('aws.amazonq.refreshStatusBar'),
             Commands.tryExecute('aws.amazonq.updateReferenceLog'),
         ])
 
-        if (e.state === 'connected' && this.isIdcConnection()) {
+        if (state === 'connected' && this.isIdcConnection()) {
             void vscode.commands.executeCommand('aws.amazonq.notifyNewCustomizations')
         }
-    }
-
-    public reformatStartUrl(startUrl: string | undefined) {
-        return !startUrl ? undefined : startUrl.replace(/[\/#]+$/g, '')
     }
 }
 

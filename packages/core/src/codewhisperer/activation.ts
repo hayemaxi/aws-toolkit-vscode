@@ -91,10 +91,11 @@ import { syncSecurityIssueWebview } from './views/securityIssue/securityIssueWeb
 import { detectCommentAboveLine } from '../shared/utilities/commentUtils'
 
 let localize: nls.LocalizeFunc
-let securityPanelViewProvider: SecurityPanelViewProvider
-let client: codewhispererClient.DefaultCodeWhispererClient
+
 export async function activate(context: ExtContext): Promise<void> {
     localize = nls.loadMessageBundle()
+
+    const auth = AuthUtil.instance
 
     // TODO: is this indirection useful?
     registerDeclaredCommands(
@@ -106,7 +107,7 @@ export async function activate(context: ExtContext): Promise<void> {
     /**
      * CodeWhisperer security panel
      */
-    securityPanelViewProvider = new SecurityPanelViewProvider(context.extensionContext)
+    const securityPanelViewProvider = new SecurityPanelViewProvider(context.extensionContext)
     context.extensionContext.subscriptions.push(
         vscode.window.registerWebviewViewProvider(SecurityPanelViewProvider.viewType, securityPanelViewProvider)
     )
@@ -125,7 +126,7 @@ export async function activate(context: ExtContext): Promise<void> {
     /**
      * Service control
      */
-    client = new codewhispererClient.DefaultCodeWhispererClient()
+    const client = new codewhispererClient.DefaultCodeWhispererClient()
 
     // Service initialization
     const container = Container.instance
@@ -146,7 +147,7 @@ export async function activate(context: ExtContext): Promise<void> {
 
             if (configurationChangeEvent.affectsConfiguration('amazonQ.showInlineCodeSuggestionsWithCodeReferences')) {
                 ReferenceLogViewProvider.instance.update()
-                if (AuthUtil.instance.isIdcConnection()) {
+                if (auth.isIdcConnection()) {
                     await vscode.window
                         .showInformationMessage(
                             CodeWhispererConstants.ssoConfigAlertMessage,
@@ -161,7 +162,7 @@ export async function activate(context: ExtContext): Promise<void> {
             }
 
             if (configurationChangeEvent.affectsConfiguration('amazonQ.shareContentWithAWS')) {
-                if (AuthUtil.instance.isIdcConnection()) {
+                if (auth.isIdcConnection()) {
                     await vscode.window
                         .showInformationMessage(
                             CodeWhispererConstants.ssoConfigAlertMessageShareData,
@@ -332,39 +333,26 @@ export async function activate(context: ExtContext): Promise<void> {
         vscode.commands.registerCommand('aws.amazonq.openEditorAtRange', openEditorAtRange)
     )
 
-    void FeatureConfigProvider.instance.fetchFeatureConfigs().catch((error) => {
-        getLogger().error('Failed to fetch feature configs - %s', error)
-    })
-
-    await Commands.tryExecute('aws.amazonq.refreshConnectionCallback')
-    container.ready()
-}
-
-export async function postInit(context: ExtContext) {
-    await AuthUtil.instance.setVscodeContextProps()
     // run the auth startup code with context for telemetry
     await telemetry.function_call.run(
         async () => {
-            // await auth.restore()
-            // await auth.clearExtraConnections()
-
-            if (AuthUtil.instance.isConnectionExpired()) {
-                AuthUtil.instance.showReauthenticatePrompt().catch((e) => {
+            if (auth.isConnectionExpired()) {
+                auth.showReauthenticatePrompt().catch((e) => {
                     const defaulMsg = localize('AWS.generic.message.error', 'Failed to reauth:')
                     void logAndShowError(localize, e, 'showReauthenticatePrompt', defaulMsg)
                 })
-                if (AuthUtil.instance.isIdcConnection()) {
-                    await AuthUtil.instance.notifySessionConfiguration()
+                if (auth.isIdcConnection()) {
+                    await auth.notifySessionConfiguration()
                 }
             }
         },
         { emit: false, functionId: { name: 'activateCwCore' } }
     )
 
-    if (AuthUtil.instance.isIdcConnection()) {
+    if (auth.isIdcConnection() && auth.isConnected()) {
         await notifyNewCustomizations()
     }
-    if (AuthUtil.instance.isBuilderIdConnection()) {
+    if (auth.isBuilderIdConnection()) {
         await CodeScansState.instance.setScansEnabled(false)
     }
 
@@ -376,16 +364,15 @@ export async function postInit(context: ExtContext) {
     setSubscriptionsForCodeIssues()
 
     function shouldRunAutoScan(editor: vscode.TextEditor | undefined, isScansEnabled?: boolean) {
-        const result =
+        return (
             (isScansEnabled ?? CodeScansState.instance.isScansEnabled()) &&
             !CodeScansState.instance.isMonthlyQuotaExceeded() &&
-            AuthUtil.instance.isConnected() &&
-            !AuthUtil.instance.isBuilderIdConnection() &&
+            auth.isConnected() &&
+            !auth.isBuilderIdConnection() &&
             editor &&
             editor.document.uri.scheme === 'file' &&
             securityScanLanguageContext.isLanguageSupported(editor.document.languageId)
-
-        return result
+        )
     }
 
     function setSubscriptionsForAutoScans() {
@@ -463,6 +450,13 @@ export async function postInit(context: ExtContext) {
             }
         })
     }
+
+    void FeatureConfigProvider.instance.fetchFeatureConfigs().catch((error) => {
+        getLogger().error('Failed to fetch feature configs - %s', error)
+    })
+
+    await Commands.tryExecute('aws.amazonq.refreshConnectionCallback')
+    container.ready()
 
     function setSubscriptionsForCodeIssues() {
         context.extensionContext.subscriptions.push(

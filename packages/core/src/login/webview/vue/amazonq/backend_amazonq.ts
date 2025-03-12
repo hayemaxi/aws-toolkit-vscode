@@ -112,7 +112,7 @@ export class AmazonQLoginWebview extends CommonAuthWebview {
                 //     isReAuth: true,
                 //     ...(await getTelemetryMetadataForConn(conn)),
                 // })
-                await AuthUtil.instance.relogin()
+                await AuthUtil.instance.reauthenticate()
                 // this.storeMetricMetadata({
                 //     ...(await getTelemetryMetadataForConn(conn)),
                 // })

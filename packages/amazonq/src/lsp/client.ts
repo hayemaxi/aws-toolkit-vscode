@@ -8,7 +8,6 @@ import * as nls from 'vscode-nls'
 import * as crypto from 'crypto'
 import * as jose from 'jose'
 import { LanguageClient, LanguageClientOptions } from 'vscode-languageclient'
-import { registerInlineCompletion } from '../app/inline/completion'
 import { AuthUtil } from 'aws-core-vscode/codewhisperer'
 import {
     ResourcePaths,
@@ -102,9 +101,7 @@ export function startLanguageServer(extensionContext: vscode.ExtensionContext, r
     const disposable = client.start()
     toDispose.push(disposable)
 
-    return client.onReady().then(async () => {
-        registerInlineCompletion(client)
-
+    void client.onReady().then(async () => {
         // Request handler for when the server wants to know about the clients auth connnection
         client.onRequest<ConnectionMetadata, Error>(notificationTypes.getConnectionMetadata.method, () => {
             return {
@@ -183,4 +180,6 @@ export function startLanguageServer(extensionContext: vscode.ExtensionContext, r
         //     await OldAuthUtil.instance.secondaryAuth.deleteConnection()
         // }
     })
+
+    return client
 }
