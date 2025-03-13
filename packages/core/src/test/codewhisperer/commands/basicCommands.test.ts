@@ -389,7 +389,7 @@ describe('CodeWhisperer-basicCommands', function () {
         })
 
         it('includes the "source" in the command execution metric', async function () {
-            sinon.stub(AuthUtil.instance, 'relogin')
+            sinon.stub(AuthUtil.instance, 'reauthenticate')
             targetCommand = testCommand(reconnect)
             await targetCommand.execute(placeholder, cwQuickPickSource)
             assertTelemetry('vscode_executeCommand', { source: cwQuickPickSource, command: targetCommand.id })

@@ -249,7 +249,7 @@ export const selectCustomizationPrompt = Commands.declare(
 
 export const reconnect = Commands.declare(
     { id: 'aws.amazonq.reconnect', compositeKey: { 1: 'source' } },
-    () => async (_: VsCodeCommandArg, source: CodeWhispererSource) => await AuthUtil.instance.relogin()
+    () => async (_: VsCodeCommandArg, source: CodeWhispererSource) => await AuthUtil.instance.reauthenticate()
 )
 
 /** @deprecated in favor of the `Add Connection` page */
@@ -576,7 +576,6 @@ export const applySecurityFix = Commands.declare(
 export const signoutCodeWhisperer = Commands.declare(
     { id: 'aws.amazonq.signout', compositeKey: { 1: 'source' } },
     () => async (_: VsCodeCommandArg, source: CodeWhispererSource) => {
-        // await auth.secondaryAuth.deleteConnection()
         await AuthUtil.instance.logout()
         SecurityIssueTreeViewProvider.instance.refresh()
         return focusAmazonQPanel.execute(placeholder, source)

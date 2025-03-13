@@ -4,12 +4,7 @@
  */
 
 import { AuthUtils, CredentialsStore, LoginManager, initializeAuth } from 'aws-core-vscode/auth'
-import {
-    // AuthUtil,
-    activate as activateCodeWhisperer,
-    shutdown as shutdownCodeWhisperer,
-    postInit,
-} from 'aws-core-vscode/codewhisperer'
+import { activate as activateCodeWhisperer, shutdown as shutdownCodeWhisperer } from 'aws-core-vscode/codewhisperer'
 import { makeEndpointsProvider, registerGenericCommands } from 'aws-core-vscode'
 import { CommonAuthWebview } from 'aws-core-vscode/login'
 import {
@@ -37,6 +32,7 @@ import {
     setupUninstallHandler,
     maybeShowMinVscodeWarning,
     Experiments,
+    Commands,
 } from 'aws-core-vscode/shared'
 import { ExtStartUpSources } from 'aws-core-vscode/telemetry'
 import { VSCODE_EXTENSION_ID } from 'aws-core-vscode/utils'
@@ -121,15 +117,19 @@ export async function activateAmazonQCommon(context: vscode.ExtensionContext, is
     const extContext = {
         extensionContext: context,
     }
+
+    await activateAmazonqLsp(context)
+
     // This contains every lsp agnostic things (auth, security scan, code scan)
-    if (Experiments.instance.get('amazonqLSP', false)) {
-        await activateAmazonqLsp(context)
-    }
     await activateCodeWhisperer(extContext as ExtContext)
-    await postInit(extContext as ExtContext)
+
     if (!Experiments.instance.get('amazonqLSP', false)) {
         await activateInlineCompletion()
     }
+
+    // Create status bar and reference log UI elements
+    void Commands.tryExecute('aws.amazonq.refreshStatusBar')
+    void Commands.tryExecute('aws.amazonq.updateReferenceLog')
 
     // Generic extension commands
     registerGenericCommands(context, amazonQContextPrefix)

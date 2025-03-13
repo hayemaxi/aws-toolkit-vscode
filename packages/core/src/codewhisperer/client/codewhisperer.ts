@@ -117,7 +117,7 @@ export class DefaultCodeWhispererClient {
                                     resp.error?.code === 'AccessDeniedException' &&
                                     resp.error.message.match(/expired/i)
                                 ) {
-                                    AuthUtil.instance.relogin().catch((e) => {
+                                    AuthUtil.instance.reauthenticate().catch((e) => {
                                         getLogger().error('reauthenticate failed: %s', (e as Error).message)
                                     })
                                     resp.error.retryable = true

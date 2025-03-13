@@ -35,6 +35,7 @@ import {
 } from '@aws/language-server-runtimes/protocol'
 import { LanguageClient } from 'vscode-languageclient'
 import { getLogger } from '../shared/logger/logger'
+import { ToolkitError } from '../shared/errors'
 
 export const notificationTypes = {
     updateBearerToken: new RequestType<UpdateCredentialsRequest, ResponseMessage, Error>(
@@ -61,6 +62,9 @@ export interface UpdateCredentialsRequest {
 
 export type TokenSource = IamIdentityCenterSsoTokenSource | AwsBuilderIdSsoTokenSource
 
+/**
+ * Handles auth requests to the Identity Server in the Amazon Q LSP.
+ */
 export class LanguageClientAuth {
     constructor(
         private readonly client: LanguageClient,
@@ -118,6 +122,7 @@ export class LanguageClientAuth {
     }
 
     /**
+     * Returns a profile by name along with its linked sso_session.
      * Does not currently exist as an API in the Identity Service.
      */
     async getProfile(profileName: string) {
@@ -130,11 +135,17 @@ export class LanguageClientAuth {
         return { profile, ssoSession }
     }
 
+    /**
+     * Update the bearer token used by inline suggestions.
+     */
     updateBearerToken(request: UpdateCredentialsParams) {
         this.client.info(`UpdateBearerToken: ${JSON.stringify(request)}`)
         return this.client.sendRequest(notificationTypes.updateBearerToken.method, request)
     }
 
+    /**
+     * Delete the bearer token used by inline suggestions.
+     */
     deleteBearerToken() {
         return this.client.sendNotification(notificationTypes.deleteBearerToken.method)
     }
@@ -159,7 +170,7 @@ interface BaseLogin {
 export type Login = IamLogin | SsoLogin
 
 /**
- * Manages an IAM Credentials connection.
+ * TODO: Manages an IAM Credentials connection.
  */
 export class IamLogin implements BaseLogin {
     readonly type = 'iam'
@@ -178,33 +189,43 @@ export class SsoLogin implements BaseLogin {
     // from the identity server.
     private ssoTokenId: string | undefined
     private connectionState: AuthState = 'notConnected'
-    private _data: { startUrl?: string; region?: string } | undefined
+    private _data: { startUrl: string; region: string } | undefined
 
     private cancellationToken: CancellationTokenSource | undefined
-
-    get data() {
-        return this._data
-    }
 
     constructor(
         public readonly profileName: string,
         private readonly lspAuth: LanguageClientAuth
     ) {
         lspAuth.registerSsoTokenChangedHandler((params: SsoTokenChangedParams) => this.ssoTokenChangedHandler(params))
-        void lspAuth.getProfile(this.profileName).then((r) => {
-            this._data = {
-                startUrl: r?.ssoSession?.settings?.sso_start_url,
-                region: r?.ssoSession?.settings?.sso_region,
-            }
-        })
     }
 
-    async login(opts?: { startUrl: string; region: string; scopes: string[] }) {
-        if (opts) {
-            await this.updateProfile(opts)
-        }
+    get data() {
+        return this._data
+    }
 
+    async login(opts: { startUrl: string; region: string; scopes: string[] }) {
+        await this.updateProfile(opts)
         return this._getSsoToken(true)
+    }
+
+    async reauthenticate() {
+        if (this.connectionState === 'notConnected') {
+            throw new ToolkitError('Cannot reauthenticate a non-existant SSO connection.')
+        }
+        return this._getSsoToken(true)
+    }
+
+    /**
+     * Restore the connection state and connection details to memory, if they exist.
+     */
+    async logout() {
+        if (this.ssoTokenId) {
+            await this.lspAuth.invalidateSsoToken(this.ssoTokenId)
+        }
+        this.updateConnectionState('notConnected')
+        this._data = undefined
+        // TODO: DeleteProfile api in Identity Service (this doesn't exist yet)
     }
 
     // For migrations
@@ -216,25 +237,39 @@ export class SsoLogin implements BaseLogin {
         }
     }
 
-    async logout() {
-        if (this.ssoTokenId) {
-            await this.lspAuth.invalidateSsoToken(this.ssoTokenId)
+    /**
+     * Restore the connection state and connection details to memory, if they exist.
+     */
+    async restore() {
+        const sessionData = await this.lspAuth.getProfile(this.profileName)
+        const ssoSession = sessionData?.ssoSession?.settings
+        if (ssoSession?.sso_region && ssoSession?.sso_start_url) {
+            this._data = {
+                startUrl: ssoSession.sso_start_url,
+                region: ssoSession.sso_region,
+            }
         }
-        this.updateConnectionState('notConnected')
-        this._data = undefined
-        // TODO: DeleteProfile api in Identity Service (this doesn't exist yet)
+
+        try {
+            await this._getSsoToken(false)
+        } catch (err) {
+            getLogger().error('Restoring connection failed: %s', err)
+        }
     }
 
-    connect() {
-        return this.getToken()
-    }
-
+    /**
+     * Cancels the active login flow, if one is running.
+     */
     cancelLogin() {
         this.cancellationToken?.cancel()
         this.cancellationToken?.dispose()
         this.cancellationToken = undefined
     }
 
+    /**
+     * Returns a decrypted access token and a payload to send to the `updateCredentials` API provided by
+     * the Amazon Q LSP.
+     */
     async getToken() {
         const response = await this._getSsoToken(false)
         const decryptedKey = await jose.compactDecrypt(response.ssoToken.accessToken, this.lspAuth.encryptionKey)
@@ -244,6 +279,10 @@ export class SsoLogin implements BaseLogin {
         }
     }
 
+    /**
+     * Returns the response from `getToken` LSP API and sets the connection state based on the errors/result
+     * of the call.
+     */
     private async _getSsoToken(login: boolean) {
         let response: GetSsoTokenResult
         this.cancellationToken = new CancellationTokenSource()
@@ -251,6 +290,12 @@ export class SsoLogin implements BaseLogin {
         try {
             response = await this.lspAuth.getSsoToken(
                 {
+                    /**
+                     * Note that we do not use SsoTokenSourceKind.AwsBuilderId here.
+                     * This is because it does not leave any state behind on disk, so
+                     * we cannot infer that a builder ID connection exists via the
+                     * Identity Server alone.
+                     */
                     kind: SsoTokenSourceKind.IamIdentityCenter,
                     profileName: this.profileName,
                 } satisfies IamIdentityCenterSsoTokenSource,
@@ -259,24 +304,21 @@ export class SsoLogin implements BaseLogin {
             )
         } catch (err: any) {
             switch (err.data?.awsErrorCode) {
+                case AwsErrorCodes.E_CANCELLED:
                 case AwsErrorCodes.E_SSO_SESSION_NOT_FOUND:
                 case AwsErrorCodes.E_PROFILE_NOT_FOUND:
                     this.updateConnectionState('notConnected')
                     break
                 case AwsErrorCodes.E_CANNOT_REFRESH_SSO_TOKEN:
-                case AwsErrorCodes.E_INVALID_SSO_TOKEN:
-                    // Only expire connected. No need to change state if it is already expired or never connected.
-                    if (this.connectionState === 'connected') {
-                        this.updateConnectionState('expired')
-                    }
+                    this.updateConnectionState('expired')
                     break
-                // Uncomment once identity server emits E_CANNOT_REFRESH_SSO_TOKEN
-                // case AwsErrorCodes.E_INVALID_SSO_TOKEN:
-                //     this.updateConnectionState('notConnected')
+                case AwsErrorCodes.E_INVALID_SSO_TOKEN:
+                    this.updateConnectionState('notConnected')
+                    break
                 // Uncomment once identity server emits E_NETWORK_ERROR, E_FILESYSTEM_ERROR
                 // case AwsErrorCodes.E_NETWORK_ERROR:
                 // case AwsErrorCodes.E_FILESYSTEM_ERROR:
-                //     // do stuff, probably nothing
+                //     // do stuff, probably nothing at all actually
                 //     break
                 default:
                     getLogger().error('SsoLogin: unknown error when requesting token: %s', err)
@@ -297,10 +339,6 @@ export class SsoLogin implements BaseLogin {
         return this.connectionState
     }
 
-    async getStartUrl() {
-        return (await this.lspAuth.getProfile(this.profileName)).ssoSession?.settings?.sso_start_url
-    }
-
     onDidChangeConnectionState(handler: (e: AuthStateEvent) => any) {
         return this.eventEmitter.event(handler)
     }
@@ -316,6 +354,8 @@ export class SsoLogin implements BaseLogin {
         if (params.ssoTokenId === this.ssoTokenId) {
             switch (params.kind) {
                 case 'Expired':
+                    // Not currently implemented on the Identity Server, but handle it
+                    // if it does exist one day.
                     this.updateConnectionState('expired')
                     return
                 case 'Refreshed': {

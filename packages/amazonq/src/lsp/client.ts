@@ -8,7 +8,6 @@ import * as nls from 'vscode-nls'
 import * as crypto from 'crypto'
 import * as jose from 'jose'
 import { LanguageClient, LanguageClientOptions } from 'vscode-languageclient'
-import { registerInlineCompletion } from '../app/inline/completion'
 import { AuthUtil } from 'aws-core-vscode/codewhisperer'
 import {
     ResourcePaths,
@@ -29,17 +28,20 @@ import {
     GetSsoTokenProgress,
     ShowMessageRequest,
 } from '@aws/language-server-runtimes/protocol'
-import { LanguageClientAuth, notificationTypes } from 'aws-core-vscode/auth'
+import { notificationTypes } from 'aws-core-vscode/auth'
 import { MessageActionItem, ShowMessageRequestParams } from 'vscode-languageclient'
 
 const localize = nls.loadMessageBundle()
+
+export const clientId = 'amazonq'
+export const clientName = oidcClientName()
+export const encryptionKey = crypto.randomBytes(32)
 
 export function startLanguageServer(extensionContext: vscode.ExtensionContext, resourcePaths: ResourcePaths) {
     const toDispose = extensionContext.subscriptions
 
     const serverModule =
         '/Volumes/workplace/language-servers/app/aws-lsp-codewhisperer-runtimes/out/token-standalone.js' // resourcePaths.lsp
-    const encryptionKey = crypto.randomBytes(32)
 
     const serverOptions = createServerOptions({
         encryptionKey,
@@ -56,7 +58,6 @@ export function startLanguageServer(extensionContext: vscode.ExtensionContext, r
 
     const documentSelector = [{ scheme: 'file', language: '*' }]
 
-    const clientId = 'amazonq'
     const traceServerEnabled = Settings.instance.isSet(`${clientId}.trace.server`)
 
     // Options to control the language client
@@ -69,7 +70,7 @@ export function startLanguageServer(extensionContext: vscode.ExtensionContext, r
                     name: env.appName,
                     version: version,
                     extension: {
-                        name: oidcClientName(),
+                        name: clientName,
                         version: '0.0.1',
                     },
                     clientId: crypto.randomUUID(),
@@ -102,9 +103,7 @@ export function startLanguageServer(extensionContext: vscode.ExtensionContext, r
     const disposable = client.start()
     toDispose.push(disposable)
 
-    return client.onReady().then(async () => {
-        registerInlineCompletion(client)
-
+    void client.onReady().then(async () => {
         // Request handler for when the server wants to know about the clients auth connnection
         client.onRequest<ConnectionMetadata, Error>(notificationTypes.getConnectionMetadata.method, () => {
             return {
@@ -167,7 +166,6 @@ export function startLanguageServer(extensionContext: vscode.ExtensionContext, r
             }
         )
 
-        AuthUtil.create(new LanguageClientAuth(client, clientId, encryptionKey))
         // const conn = (AuthUtil.instance.conn as SsoConnection) ?? AuthUtil.instance.auth.activeConnection
         // if (conn) {
         //     await Auth2.instance.importOldSsoSession(
@@ -183,4 +181,6 @@ export function startLanguageServer(extensionContext: vscode.ExtensionContext, r
         //     await OldAuthUtil.instance.secondaryAuth.deleteConnection()
         // }
     })
+
+    return client
 }
