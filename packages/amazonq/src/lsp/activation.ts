@@ -4,24 +4,39 @@
  */
 
 import vscode from 'vscode'
-import { startLanguageServer } from './client'
+import { clientId, clientInfoName, encryptionKey, startLanguageServer } from './client'
 import { AmazonQLspInstaller } from './lspInstaller'
-import { Commands, lspSetupStage, ToolkitError } from 'aws-core-vscode/shared'
+import { lspSetupStage, ToolkitError } from 'aws-core-vscode/shared'
+import { registerInlineCompletion } from '../app/inline/completion'
+import { Commands } from 'aws-core-vscode/shared'
+import { Experiments } from 'aws-core-vscode/shared'
+import { AuthUtil } from 'aws-core-vscode/codewhisperer'
+import { LanguageClientAuth } from 'aws-core-vscode/auth'
 
-export async function activate(ctx: vscode.ExtensionContext): Promise<void> {
+export async function activate(ctx: vscode.ExtensionContext) {
     try {
-        await lspSetupStage('all', async () => {
+        const client = await lspSetupStage('all', async () => {
             const installResult = await new AmazonQLspInstaller().resolve()
-            await lspSetupStage('launch', async () => await startLanguageServer(ctx, installResult.resourcePaths))
+            return await lspSetupStage('launch', () => startLanguageServer(ctx, installResult.resourcePaths))
         })
-        ctx.subscriptions.push(
-            Commands.register({ id: 'aws.amazonq.invokeInlineCompletion', autoconnect: true }, async () => {
-                await vscode.commands.executeCommand('editor.action.inlineSuggest.trigger')
-            }),
-            Commands.declare('aws.amazonq.rejectCodeSuggestion', () => async () => {
-                await vscode.commands.executeCommand('editor.action.inlineSuggest.hide')
-            }).register()
-        )
+        await client.onReady()
+
+        AuthUtil.create(new LanguageClientAuth(client, clientId, encryptionKey))
+        AuthUtil.instance.migrateExistingConnection(clientInfoName)
+
+        await AuthUtil.instance.restore()
+
+        if (Experiments.instance.get('amazonqLSP', false)) {
+            registerInlineCompletion(client)
+            ctx.subscriptions.push(
+                Commands.register({ id: 'aws.amazonq.invokeInlineCompletion', autoconnect: true }, async () => {
+                    await vscode.commands.executeCommand('editor.action.inlineSuggest.trigger')
+                }),
+                Commands.declare('aws.amazonq.rejectCodeSuggestion', () => async () => {
+                    await vscode.commands.executeCommand('editor.action.inlineSuggest.hide')
+                }).register()
+            )
+        }
     } catch (err) {
         const e = err as ToolkitError
         void vscode.window.showInformationMessage(`Unable to launch amazonq language server: ${e.message}`)

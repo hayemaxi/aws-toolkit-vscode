@@ -6,26 +6,46 @@
 import vscode, { env, version } from 'vscode'
 import * as nls from 'vscode-nls'
 import * as crypto from 'crypto'
-import { LanguageClient, LanguageClientOptions } from 'vscode-languageclient'
-import { registerInlineCompletion } from '../app/inline/completion'
-import { AmazonQLspAuth, encryptionKey, notificationTypes } from './auth'
+import * as jose from 'jose'
+import {
+    LanguageClient,
+    LanguageClientOptions,
+    MessageActionItem,
+    ShowMessageRequestParams,
+} from 'vscode-languageclient'
 import { AuthUtil } from 'aws-core-vscode/codewhisperer'
-import { ConnectionMetadata } from '@aws/language-server-runtimes/protocol'
 import {
     ResourcePaths,
     Settings,
-    oidcClientName,
     createServerOptions,
+    oidcClientName,
     globals,
     getLogger,
+    openUrl,
 } from 'aws-core-vscode/shared'
+import {
+    ConnectionMetadata,
+    ShowDocumentParams,
+    ShowDocumentRequest,
+    ShowDocumentResult,
+    GetSsoTokenProgressType,
+    GetSsoTokenProgressToken,
+    GetSsoTokenProgress,
+    ShowMessageRequest,
+} from '@aws/language-server-runtimes/protocol'
+import { notificationTypes } from 'aws-core-vscode/auth'
 
 const localize = nls.loadMessageBundle()
 
-export async function startLanguageServer(extensionContext: vscode.ExtensionContext, resourcePaths: ResourcePaths) {
+export const clientId = 'amazonq'
+export const encryptionKey = crypto.randomBytes(32)
+export const clientInfoName = env.appName
+
+export function startLanguageServer(extensionContext: vscode.ExtensionContext, resourcePaths: ResourcePaths) {
     const toDispose = extensionContext.subscriptions
 
-    const serverModule = resourcePaths.lsp
+    const serverModule =
+        '/Volumes/workplace/language-servers/app/aws-lsp-codewhisperer-runtimes/out/token-standalone.js' // resourcePaths.lsp
 
     const serverOptions = createServerOptions({
         encryptionKey,
@@ -41,8 +61,6 @@ export async function startLanguageServer(extensionContext: vscode.ExtensionCont
     })
 
     const documentSelector = [{ scheme: 'file', language: '*' }]
-
-    const clientId = 'amazonq'
     const traceServerEnabled = Settings.instance.isSet(`${clientId}.trace.server`)
 
     // Options to control the language client
@@ -52,7 +70,7 @@ export async function startLanguageServer(extensionContext: vscode.ExtensionCont
         initializationOptions: {
             aws: {
                 clientInfo: {
-                    name: env.appName,
+                    name: clientInfoName,
                     version: version,
                     extension: {
                         name: oidcClientName(),
@@ -82,48 +100,76 @@ export async function startLanguageServer(extensionContext: vscode.ExtensionCont
               }),
     }
 
-    const client = new LanguageClient(
-        clientId,
-        localize('amazonq.server.name', 'Amazon Q Language Server'),
-        serverOptions,
-        clientOptions
-    )
+    const lspName = localize('amazonq.server.name', 'Amazon Q Language Server')
+    const client = new LanguageClient(clientId, lspName, serverOptions, clientOptions)
 
     const disposable = client.start()
     toDispose.push(disposable)
 
-    const auth = new AmazonQLspAuth(client)
-
-    return client.onReady().then(async () => {
-        await auth.init()
-        registerInlineCompletion(client)
-
+    void client.onReady().then(async () => {
         // Request handler for when the server wants to know about the clients auth connnection
         client.onRequest<ConnectionMetadata, Error>(notificationTypes.getConnectionMetadata.method, () => {
             return {
                 sso: {
-                    startUrl: AuthUtil.instance.auth.startUrl,
+                    startUrl: AuthUtil.instance.connection?.startUrl,
                 },
             }
         })
 
-        // Temporary code for pen test. Will be removed when we switch to the real flare auth
-        const authInterval = setInterval(async () => {
+        client.onRequest<ShowDocumentResult, Error>(ShowDocumentRequest.method, async (params: ShowDocumentParams) => {
             try {
-                await auth.init()
-            } catch (e) {
-                getLogger('amazonqLsp').error('Unable to update bearer token: %s', (e as Error).message)
-                clearInterval(authInterval)
+                return { success: await openUrl(vscode.Uri.parse(params.uri), lspName) }
+            } catch (err: any) {
+                getLogger().error(`Failed to open document for LSP: ${lspName}, error: %s`, err)
+                return { success: false }
             }
-        }, 300000) // every 5 minutes
+        })
 
-        toDispose.push(
-            AuthUtil.instance.auth.onDidChangeActiveConnection(async () => {
-                await auth.init()
-            }),
-            AuthUtil.instance.auth.onDidDeleteConnection(async () => {
-                client.sendNotification(notificationTypes.deleteBearerToken.method)
-            })
+        client.onRequest<MessageActionItem | null, Error>(
+            ShowMessageRequest.method,
+            async (params: ShowMessageRequestParams) => {
+                const actions = params.actions?.map((a) => a.title) ?? []
+                const response = await vscode.window.showInformationMessage(params.message, { modal: true }, ...actions)
+                return params.actions?.find((a) => a.title === response) ?? (undefined as unknown as null)
+            }
+        )
+
+        let promise: Promise<void> | undefined
+        let resolver: () => void = () => {}
+        client.onProgress(
+            GetSsoTokenProgressType,
+            GetSsoTokenProgressToken,
+            async (partialResult: GetSsoTokenProgress) => {
+                // LSP encrypts this particular request by default
+                const decryptedKey = await jose.compactDecrypt(partialResult as unknown as string, encryptionKey)
+                const val: GetSsoTokenProgress = JSON.parse(decryptedKey.plaintext.toString())
+
+                if (val.state === 'InProgress') {
+                    if (promise) {
+                        resolver()
+                    }
+                    promise = new Promise<void>((resolve) => {
+                        resolver = resolve
+                    })
+                } else {
+                    resolver()
+                    promise = undefined
+                    return
+                }
+
+                void vscode.window.withProgress(
+                    {
+                        cancellable: true,
+                        location: vscode.ProgressLocation.Notification,
+                        title: val.message,
+                    },
+                    async (_) => {
+                        await promise
+                    }
+                )
+            }
         )
     })
+
+    return client
 }
