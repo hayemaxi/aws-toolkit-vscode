@@ -38,6 +38,7 @@ export type globalKey =
     | 'aws.amazonq.disclaimerAcknowledged' // Legacy, use `AmazonQPromptSettings` instead.
     | 'aws.notifications'
     | 'aws.notifications.dev' // keys to store notifications for testing
+    | 'aws.notes'
     | 'aws.downloadPath'
     | 'aws.lastTouchedS3Folder'
     | 'aws.lastUploadedToS3Folder'
