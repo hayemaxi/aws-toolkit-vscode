@@ -123,6 +123,14 @@ export default defineComponent({
             }
         },
 
+        async openResourceConsole(ref: AwsResourceRef) {
+            await client.openResourceInConsole(ref)
+        },
+
+        getServiceClass(serviceType: string): string {
+            return serviceType.toLowerCase()
+        },
+
         async saveNote() {
             if (!this.note) {
                 return

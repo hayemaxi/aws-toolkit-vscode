@@ -19,11 +19,13 @@
                     <span
                         v-for="ref in note.awsResourceRefs"
                         :key="ref.resourceArn"
-                        class="resource-chip"
+                        :class="['resource-chip', getServiceClass(ref.serviceType)]"
+                        @click="openResourceConsole(ref)"
+                        title="Click to open in AWS Console"
                     >
                         <span class="resource-type">{{ ref.serviceType }}</span>
                         <span class="resource-name">{{ ref.resourceName }}</span>
-                        <button class="remove-btn" @click="removeResource(ref)" title="Remove resource">×</button>
+                        <button class="remove-btn" @click.stop="removeResource(ref)" title="Remove resource">×</button>
                     </span>
                 </div>
             </div>
@@ -131,6 +133,27 @@
     color: var(--vscode-badge-foreground);
     border-radius: 4px;
     font-size: 12px;
+    cursor: pointer;
+    transition: opacity 0.15s ease;
+}
+
+.resource-chip:hover {
+    opacity: 0.85;
+}
+
+.resource-chip.lambda {
+    background: #ff9900;
+    color: #232f3e;
+}
+
+.resource-chip.ec2 {
+    background: #3b48cc;
+    color: #ffffff;
+}
+
+.resource-chip.s3 {
+    background: #3f8624;
+    color: #ffffff;
 }
 
 .resource-type {

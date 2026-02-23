@@ -12,6 +12,7 @@ import { S3Client } from '../../../shared/clients/s3'
 import globals from '../../../shared/extensionGlobals'
 import { toArrayAsync } from '../../../shared/utilities/collectionUtils'
 import { getLogger } from '../../../shared/logger/logger'
+import { buildConsoleUrl } from '../../utils/resourceUtils'
 
 export interface SearchResult {
     serviceType: string
@@ -70,6 +71,11 @@ export class NoteEditorWebview extends VueWebview {
         await this.repository.updateNote(note)
         this.onNoteUpdated.fire(note)
         return note
+    }
+
+    public async openResourceInConsole(ref: AwsResourceRef): Promise<void> {
+        const url = buildConsoleUrl(ref)
+        await vscode.env.openExternal(vscode.Uri.parse(url))
     }
 
     public async searchResources(query: string, regionCode?: string): Promise<SearchResult[]> {

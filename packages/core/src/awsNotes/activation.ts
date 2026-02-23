@@ -9,7 +9,8 @@ import { Commands } from '../shared/vscode/commands2'
 import { NotesRepository } from './models/note'
 import { NotesExplorer } from './explorer/notesExplorer'
 import { NoteNode } from './explorer/noteNode'
-import { createNote, deleteNote, viewNote, editNote } from './commands/noteCommands'
+import { AwsResourceRefNode } from './explorer/awsResourceRefNode'
+import { createNote, deleteNote, viewNote, editNote, openResourceInConsole, revealResourceInExplorer } from './commands/noteCommands'
 
 /**
  * Activates the AWS Notes feature.
@@ -39,6 +40,14 @@ export async function activate(context: ExtContext): Promise<void> {
 
         Commands.register('aws.notes.refresh', () => {
             explorer.refresh()
+        }),
+
+        Commands.register('aws.notes.openResourceInConsole', async (node: AwsResourceRefNode) => {
+            await openResourceInConsole(node)
+        }),
+
+        Commands.register('aws.notes.revealInExplorer', async (node: AwsResourceRefNode) => {
+            await revealResourceInExplorer(node)
         })
     )
 }

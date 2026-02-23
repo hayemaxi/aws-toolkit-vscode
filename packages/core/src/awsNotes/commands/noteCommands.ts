@@ -10,6 +10,8 @@ import { NoteNode } from '../explorer/noteNode'
 import { NotesExplorer } from '../explorer/notesExplorer'
 import { ExtContext } from '../../shared/extensions'
 import { NoteEditorPanel } from '../vue/noteEditor/backend'
+import { AwsResourceRefNode } from '../explorer/awsResourceRefNode'
+import { buildConsoleUrl } from '../utils/resourceUtils'
 
 /**
  * Creates a new note.
@@ -111,4 +113,25 @@ export async function editNote(
         explorer.refresh()
     })
     await panel.show({ title: `Edit: ${node.note.title}` })
+}
+
+/**
+ * Opens a resource reference in the AWS Console.
+ */
+export async function openResourceInConsole(node: AwsResourceRefNode): Promise<void> {
+    const url = buildConsoleUrl(node.resourceRef)
+    await vscode.env.openExternal(vscode.Uri.parse(url))
+}
+
+/**
+ * Reveals a resource in the AWS Explorer.
+ */
+export async function revealResourceInExplorer(node: AwsResourceRefNode): Promise<void> {
+    const ref = node.resourceRef
+    // Show the region in explorer, then try to reveal the service
+    await vscode.commands.executeCommand('aws.showRegion', ref.regionCode)
+    // Optionally try to expand the service node - this is best-effort
+    void vscode.window.showInformationMessage(
+        `Navigate to ${ref.serviceType} > ${ref.resourceName} in the AWS Explorer`
+    )
 }

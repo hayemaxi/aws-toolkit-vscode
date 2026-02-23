@@ -35,18 +35,33 @@ export class NoteNode extends AWSTreeNodeBase {
         return content.substring(0, maxLength) + '...'
     }
 
-    private buildTooltip(): string {
-        const lines: string[] = [
-            `Title: ${this.note.title}`,
-            '',
-            this.note.content || '(No content)',
-            '',
-            `Created: ${new Date(this.note.createdAt).toLocaleString()}`,
-            `Updated: ${new Date(this.note.updatedAt).toLocaleString()}`,
-        ]
+    private buildTooltip(): vscode.MarkdownString {
+        const md = new vscode.MarkdownString()
+        md.appendMarkdown(`**${this.note.title}**\n\n`)
+        md.appendText(this.note.content || '(No content)')
+        md.appendMarkdown('\n\n---\n\n')
+        md.appendText(`Created: ${new Date(this.note.createdAt).toLocaleString()}\n`)
+        md.appendText(`Updated: ${new Date(this.note.updatedAt).toLocaleString()}`)
+
         if (this.note.awsResourceRefs.length > 0) {
-            lines.push('', `Linked Resources: ${this.note.awsResourceRefs.length}`)
+            md.appendMarkdown('\n\n**Linked Resources:**\n')
+            for (const ref of this.note.awsResourceRefs) {
+                md.appendMarkdown(`- $(${this.getServiceIconId(ref.serviceType)}) ${ref.resourceName}\n`)
+            }
         }
-        return lines.join('\n')
+        return md
+    }
+
+    private getServiceIconId(serviceType: string): string {
+        const iconMap: Record<string, string> = {
+            lambda: 'symbol-function',
+            s3: 'archive',
+            ec2: 'server',
+            cloudwatch: 'pulse',
+            ecs: 'layers',
+            ecr: 'package',
+            iot: 'radio-tower',
+        }
+        return iconMap[serviceType.toLowerCase()] ?? 'cloud'
     }
 }

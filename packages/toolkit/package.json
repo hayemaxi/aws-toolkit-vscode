@@ -824,6 +824,14 @@
                     "when": "false"
                 },
                 {
+                    "command": "aws.notes.openResourceInConsole",
+                    "when": "false"
+                },
+                {
+                    "command": "aws.notes.revealInExplorer",
+                    "when": "false"
+                },
+                {
                     "command": "aws.launchDebugConfigForm",
                     "when": "false"
                 },
@@ -1492,6 +1500,16 @@
                     "command": "aws.notes.delete",
                     "when": "view == aws.notes && viewItem == awsNoteNode",
                     "group": "1@1"
+                },
+                {
+                    "command": "aws.notes.openResourceInConsole",
+                    "when": "view == aws.notes && viewItem == awsResourceRefNode",
+                    "group": "1_actions@0"
+                },
+                {
+                    "command": "aws.notes.revealInExplorer",
+                    "when": "view == aws.notes && viewItem == awsResourceRefNode",
+                    "group": "1_actions@1"
                 },
                 {
                     "command": "aws.apig.invokeRemoteRestApi",
@@ -2412,6 +2430,20 @@
                 "category": "%AWS.title%",
                 "enablement": "isCloud9 || !aws.isWebExtHost",
                 "icon": "$(refresh)"
+            },
+            {
+                "command": "aws.notes.openResourceInConsole",
+                "title": "%AWS.notes.openResourceInConsole%",
+                "category": "%AWS.title%",
+                "enablement": "isCloud9 || !aws.isWebExtHost",
+                "icon": "$(link-external)"
+            },
+            {
+                "command": "aws.notes.revealInExplorer",
+                "title": "%AWS.notes.revealInExplorer%",
+                "category": "%AWS.title%",
+                "enablement": "isCloud9 || !aws.isWebExtHost",
+                "icon": "$(search)"
             },
             {
                 "command": "aws.accessanalyzer.iamPolicyChecks",
