@@ -816,6 +816,10 @@
                     "when": "false"
                 },
                 {
+                    "command": "aws.notes.edit",
+                    "when": "false"
+                },
+                {
                     "command": "aws.notes.refresh",
                     "when": "false"
                 },
@@ -1478,6 +1482,11 @@
                     "command": "aws.notes.view",
                     "when": "view == aws.notes && viewItem == awsNoteNode",
                     "group": "0@1"
+                },
+                {
+                    "command": "aws.notes.edit",
+                    "when": "view == aws.notes && viewItem == awsNoteNode",
+                    "group": "0@0"
                 },
                 {
                     "command": "aws.notes.delete",
@@ -2388,6 +2397,12 @@
             {
                 "command": "aws.notes.view",
                 "title": "%AWS.notes.view%",
+                "category": "%AWS.title%",
+                "enablement": "isCloud9 || !aws.isWebExtHost"
+            },
+            {
+                "command": "aws.notes.edit",
+                "title": "%AWS.notes.edit%",
                 "category": "%AWS.title%",
                 "enablement": "isCloud9 || !aws.isWebExtHost"
             },

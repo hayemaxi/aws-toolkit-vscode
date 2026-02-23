@@ -8,6 +8,8 @@ import * as crypto from 'crypto'
 import { Note, NotesRepository } from '../models/note'
 import { NoteNode } from '../explorer/noteNode'
 import { NotesExplorer } from '../explorer/notesExplorer'
+import { ExtContext } from '../../shared/extensions'
+import { NoteEditorPanel } from '../vue/noteEditor/backend'
 
 /**
  * Creates a new note.
@@ -93,4 +95,20 @@ export async function viewNote(node: NoteNode): Promise<void> {
     await editor.edit((edit: vscode.TextEditorEdit) => {
         edit.insert(new vscode.Position(0, 0), content.join('\n'))
     })
+}
+
+/**
+ * Opens a note for editing in the webview editor.
+ */
+export async function editNote(
+    node: NoteNode,
+    repository: NotesRepository,
+    explorer: NotesExplorer,
+    context: ExtContext
+): Promise<void> {
+    const panel = new NoteEditorPanel(context.extensionContext, repository, node.note.id)
+    panel.server.onNoteUpdated.event(() => {
+        explorer.refresh()
+    })
+    await panel.show({ title: `Edit: ${node.note.title}` })
 }
