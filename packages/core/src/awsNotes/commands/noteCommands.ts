@@ -15,6 +15,9 @@ import { buildConsoleUrl } from '../utils/resourceUtils'
 
 /**
  * Creates a new note.
+ *
+ * @param repository - The NotesRepository instance for persisting the note
+ * @param explorer - The NotesExplorer instance to refresh after creation
  */
 export async function createNote(repository: NotesRepository, explorer: NotesExplorer): Promise<void> {
     const title = await vscode.window.showInputBox({
@@ -49,6 +52,10 @@ export async function createNote(repository: NotesRepository, explorer: NotesExp
 
 /**
  * Deletes a note with confirmation.
+ *
+ * @param node - The NoteNode representing the note to delete
+ * @param repository - The NotesRepository instance for deleting the note
+ * @param explorer - The NotesExplorer instance to refresh after deletion
  */
 export async function deleteNote(
     node: NoteNode,

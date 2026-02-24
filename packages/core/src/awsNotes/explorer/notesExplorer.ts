@@ -13,6 +13,9 @@ import { makeChildrenNodes } from '../../shared/treeview/utils'
 /**
  * Placeholder parent node for the placeholder message.
  * Since PlaceholderNode requires a parent, we create a minimal one.
+ *
+ * TODO: Expand documentation to cover tree node hierarchy, event handling,
+ * and integration patterns with other AWS Explorer components.
  */
 class NotesRootNode extends AWSTreeNodeBase {
     public constructor() {
