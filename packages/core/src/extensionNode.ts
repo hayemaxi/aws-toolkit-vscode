@@ -40,6 +40,7 @@ import { activate as activateApplicationComposer } from './applicationcomposer/a
 import { activate as activateRedshift } from './awsService/redshift/activation'
 import { activate as activateDocumentDb } from './docdb/activation'
 import { activate as activateIamPolicyChecks } from './awsService/accessanalyzer/activation'
+import { activate as activateAwsNotes } from './awsNotes/activation'
 import { activate as activateNotifications } from './notifications/activation'
 import { SchemaService } from './shared/schemas'
 import { AwsResourceManager } from './dynamicResources/awsResourceManager'
@@ -208,6 +209,8 @@ export async function activate(context: vscode.ExtensionContext) {
         await activateDocumentDb(extContext)
 
         await activateIamPolicyChecks(extContext)
+
+        await activateAwsNotes(extContext)
 
         context.subscriptions.push(
             vscode.window.registerUriHandler({
